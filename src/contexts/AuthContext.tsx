@@ -29,7 +29,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           const docRef = doc(db, 'users', currentUser.uid);
           const docSnap = await getDoc(docRef);
           if (docSnap.exists()) {
-            setProfile(docSnap.data() as UserProfile);
+            const data = docSnap.data() as UserProfile;
+            // Force admin role for the specific email if not already set
+            if (currentUser.email === 'nmajufavour16@gmail.com' && data.role !== 'admin') {
+              data.role = 'admin';
+              await setDoc(docRef, { role: 'admin' }, { merge: true });
+            }
+            setProfile(data);
           } else {
             const newProfile: UserProfile = {
               uid: currentUser.uid,
