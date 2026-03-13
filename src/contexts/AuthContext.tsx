@@ -38,6 +38,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
               photoURL: currentUser.photoURL || '',
               targetCGPA: 4.5,
               gradingScale: 5.0,
+              role: currentUser.email === 'nmajufavour16@gmail.com' ? 'admin' : 'user',
               createdAt: new Date().toISOString()
             };
             await setDoc(docRef, newProfile);

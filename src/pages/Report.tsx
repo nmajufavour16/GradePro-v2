@@ -61,6 +61,14 @@ export default function Report() {
               <p className="text-sm text-slate-500 uppercase tracking-wider font-semibold mb-1">Email</p>
               <p className="text-xl font-bold text-slate-900">{profile?.email}</p>
             </div>
+            <div>
+              <p className="text-sm text-slate-500 uppercase tracking-wider font-semibold mb-1">Institution</p>
+              <p className="text-lg font-bold text-slate-900">{profile?.institution || 'N/A'}</p>
+            </div>
+            <div>
+              <p className="text-sm text-slate-500 uppercase tracking-wider font-semibold mb-1">Faculty</p>
+              <p className="text-lg font-bold text-slate-900">{profile?.faculty || 'N/A'}</p>
+            </div>
           </div>
 
           {/* Summary Stats */}

@@ -5,7 +5,41 @@ export interface UserProfile {
   photoURL?: string;
   targetCGPA?: number;
   gradingScale?: number;
+  institution?: string;
+  faculty?: string;
+  department?: string;
+  level?: string;
+  role?: 'admin' | 'user';
   createdAt?: string;
+}
+
+export interface AppMetadata {
+  id: string;
+  institutions: string[];
+  faculties: string[];
+  departments: string[];
+  courseTemplates: {
+    code: string;
+    title: string;
+    units: number;
+  }[];
+}
+
+export interface ChatSession {
+  id: string;
+  userId: string;
+  title: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface ChatMessage {
+  id: string;
+  chatId: string;
+  userId: string;
+  role: 'user' | 'assistant';
+  content: string;
+  createdAt: string;
 }
 
 export interface Semester {

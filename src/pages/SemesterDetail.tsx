@@ -1,7 +1,10 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { useData } from '../contexts/DataContext';
 import { useAuth } from '../contexts/AuthContext';
+import { doc, getDoc } from 'firebase/firestore';
+import { db } from '../firebase';
+import { AppMetadata } from '../types';
 import { calculateGPA, getGradePoint } from '../utils/gpa';
 import { ArrowLeft, Plus, Trash2, Edit2, Check, X } from 'lucide-react';
 
@@ -9,6 +12,7 @@ export default function SemesterDetail() {
   const { id } = useParams<{ id: string }>();
   const { semesters, courses, addCourse, updateCourse, deleteCourse } = useData();
   const { profile } = useAuth();
+  const [metadata, setMetadata] = useState<AppMetadata | null>(null);
   
   const semester = semesters.find(s => s.id === id);
   const semesterCourses = courses.filter(c => c.semesterId === id);
@@ -25,6 +29,32 @@ export default function SemesterDetail() {
     grade: 'A',
     score: ''
   });
+
+  useEffect(() => {
+    const fetchMetadata = async () => {
+      const docSnap = await getDoc(doc(db, 'metadata', 'app-config'));
+      if (docSnap.exists()) {
+        setMetadata(docSnap.data() as AppMetadata);
+      }
+    };
+    fetchMetadata();
+  }, []);
+
+  const handleCodeChange = (code: string) => {
+    const upperCode = code.toUpperCase();
+    setFormData({ ...formData, code: upperCode });
+    
+    // Auto-fill title and units if template exists
+    const template = metadata?.courseTemplates.find(t => t.code === upperCode);
+    if (template) {
+      setFormData(prev => ({
+        ...prev,
+        code: upperCode,
+        title: template.title,
+        units: template.units
+      }));
+    }
+  };
 
   if (!semester) {
     return (
@@ -110,11 +140,15 @@ export default function SemesterDetail() {
               <input
                 required
                 type="text"
+                list="course-templates"
                 placeholder="e.g. MTH101"
                 value={formData.code}
-                onChange={(e) => setFormData({ ...formData, code: e.target.value.toUpperCase() })}
+                onChange={(e) => handleCodeChange(e.target.value)}
                 className="w-full px-4 py-2 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none uppercase"
               />
+              <datalist id="course-templates">
+                {metadata?.courseTemplates.map(t => <option key={t.code} value={t.code}>{t.title}</option>)}
+              </datalist>
             </div>
             <div className="lg:col-span-2">
               <label className="block text-sm font-medium text-slate-700 mb-1">Title (Optional)</label>

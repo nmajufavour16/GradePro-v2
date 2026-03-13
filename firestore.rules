@@ -44,6 +44,12 @@ service cloud.firestore {
       return request.auth != null;
     }
 
+    function isAdmin() {
+      return isAuthenticated() &&
+        (get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin' ||
+          (request.auth.token.email == "nmajufavour16@gmail.com" && request.auth.token.email_verified == true));
+    }
+
     function isOwner(userId) {
       return isAuthenticated() && request.auth.uid == userId;
     }
@@ -82,8 +88,13 @@ service cloud.firestore {
              isValidEmail(data.email) &&
              isValidOptionalString('displayName', 0, 100) &&
              isValidOptionalString('photoURL', 0, 500) &&
+             isValidOptionalString('institution', 0, 100) &&
+             isValidOptionalString('faculty', 0, 100) &&
+             isValidOptionalString('department', 0, 100) &&
+             isValidOptionalString('level', 0, 20) &&
              (!( 'targetCGPA' in data ) || (data.targetCGPA is number && data.targetCGPA >= 0 && data.targetCGPA <= 5.0)) &&
-             (!( 'gradingScale' in data ) || (data.gradingScale is number && data.gradingScale >= 0 && data.gradingScale <= 5.0));
+             (!( 'gradingScale' in data ) || (data.gradingScale is number && data.gradingScale >= 0 && data.gradingScale <= 5.0)) &&
+             (!( 'role' in data ) || (data.role in ['admin', 'user']));
     }
 
     function isValidSemester(data) {
@@ -105,28 +116,69 @@ service cloud.firestore {
              data.gradePoint is number && data.gradePoint >= 0 && data.gradePoint <= 5.0;
     }
 
+    function isValidChatSession(data) {
+      return hasRequiredFields(['userId', 'title']) &&
+             data.userId == request.auth.uid &&
+             data.title is string && data.title.size() > 0 && data.title.size() <= 200;
+    }
+
+    function isValidChatMessage(data) {
+      return hasRequiredFields(['chatId', 'userId', 'role', 'content']) &&
+             data.chatId is string && data.chatId.size() > 0 && data.chatId.size() <= 100 &&
+             data.userId == request.auth.uid &&
+             data.role in ['user', 'assistant'] &&
+             data.content is string && data.content.size() > 0 && data.content.size() <= 10000;
+    }
+
+    function isValidMetadata(data) {
+      return hasRequiredFields(['institutions', 'faculties', 'departments', 'courseTemplates']) &&
+             data.institutions is list &&
+             data.faculties is list &&
+             data.departments is list &&
+             data.courseTemplates is list;
+    }
+
     // ===============================================================
     // Rules
     // ===============================================================
     match /users/{userId} {
-      allow read: if isOwner(userId);
+      allow read: if isOwner(userId) || isAdmin();
       allow create: if isOwner(userId) && isValidUser(request.resource.data) && uidUnchanged();
-      allow update: if isOwner(userId) && isValidUser(request.resource.data) && uidNotModified();
-      allow delete: if isOwner(userId);
+      allow update: if (isOwner(userId) && isValidUser(request.resource.data) && uidNotModified() && (request.resource.data.role == resource.data.role || isAdmin())) || isAdmin();
+      allow delete: if isAdmin();
     }
 
     match /semesters/{semesterId} {
-      allow read: if isAuthenticated() && resource.data.userId == request.auth.uid;
+      allow read: if (isAuthenticated() && resource.data.userId == request.auth.uid) || isAdmin();
       allow create: if isAuthenticated() && isValidSemester(request.resource.data);
-      allow update: if isAuthenticated() && isDocOwner() && isValidSemester(request.resource.data) && request.resource.data.userId == resource.data.userId;
-      allow delete: if isAuthenticated() && isDocOwner();
+      allow update: if (isAuthenticated() && isDocOwner() && isValidSemester(request.resource.data) && request.resource.data.userId == resource.data.userId) || isAdmin();
+      allow delete: if (isAuthenticated() && isDocOwner()) || isAdmin();
     }
 
     match /courses/{courseId} {
-      allow read: if isAuthenticated() && resource.data.userId == request.auth.uid;
+      allow read: if (isAuthenticated() && resource.data.userId == request.auth.uid) || isAdmin();
       allow create: if isAuthenticated() && isValidCourse(request.resource.data);
-      allow update: if isAuthenticated() && isDocOwner() && isValidCourse(request.resource.data) && request.resource.data.userId == resource.data.userId;
-      allow delete: if isAuthenticated() && isDocOwner();
+      allow update: if (isAuthenticated() && isDocOwner() && isValidCourse(request.resource.data) && request.resource.data.userId == resource.data.userId) || isAdmin();
+      allow delete: if (isAuthenticated() && isDocOwner()) || isAdmin();
+    }
+
+    match /chatSessions/{sessionId} {
+      allow read: if (isAuthenticated() && resource.data.userId == request.auth.uid) || isAdmin();
+      allow create: if isAuthenticated() && isValidChatSession(request.resource.data);
+      allow update: if (isAuthenticated() && isDocOwner() && isValidChatSession(request.resource.data) && request.resource.data.userId == resource.data.userId) || isAdmin();
+      allow delete: if (isAuthenticated() && isDocOwner()) || isAdmin();
+    }
+
+    match /chatMessages/{messageId} {
+      allow read: if (isAuthenticated() && resource.data.userId == request.auth.uid) || isAdmin();
+      allow create: if isAuthenticated() && isValidChatMessage(request.resource.data);
+      allow update: if (isAuthenticated() && isDocOwner() && isValidChatMessage(request.resource.data) && request.resource.data.userId == resource.data.userId) || isAdmin();
+      allow delete: if (isAuthenticated() && isDocOwner()) || isAdmin();
+    }
+
+    match /metadata/{metadataId} {
+      allow read: if isAuthenticated();
+      allow write: if isAdmin() && isValidMetadata(request.resource.data);
     }
   }
 }
