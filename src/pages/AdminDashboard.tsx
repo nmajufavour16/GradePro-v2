@@ -13,8 +13,62 @@ import {
   BarChart3, 
   Search,
   ChevronRight,
-  ShieldCheck
+  ShieldCheck,
+  Database
 } from 'lucide-react';
+
+const NIGERIAN_UNIVERSITIES = [
+  "University of Ibadan (UI)", "Obafemi Awolowo University (OAU)", "University of Lagos (UNILAG)", 
+  "Ahmadu Bello University (ABU)", "University of Nigeria, Nsukka (UNN)", "University of Ilorin (UNILORIN)", 
+  "Covenant University (CU)", "Babcock University", "Afe Babalola University (ABUAD)", 
+  "Lagos State University (LASU)", "University of Benin (UNIBEN)", "University of Port Harcourt (UNIPORT)",
+  "Federal University of Technology, Minna (FUTMINNA)", "Federal University of Technology, Akure (FUTA)",
+  "Federal University of Technology, Owerri (FUTO)", "Nnamdi Azikiwe University (UNIZIK)",
+  "Bayero University Kano (BUK)", "University of Jos (UNIJOS)", "University of Abuja (UNIABUJA)",
+  "University of Uyo (UNIUYO)", "University of Calabar (UNICAL)", "Delta State University (DELSU)",
+  "Rivers State University (RSU)", "Olabisi Onabanjo University (OOU)", "Ekiti State University (EKSU)",
+  "Redeemer's University", "Bowen University", "Bingham University", "Baze University", "Nile University",
+  "Pan-Atlantic University", "Landmark University", "Igbinedion University", "Lead City University"
+];
+
+const COMMON_FACULTIES = [
+  "Agriculture", "Arts", "Basic Medical Sciences", "Clinical Sciences", "Dentistry", 
+  "Education", "Engineering", "Environmental Sciences", "Law", "Management Sciences", 
+  "Pharmacy", "Science", "Social Sciences", "Veterinary Medicine", "Communication and Media Studies"
+];
+
+const COMMON_DEPARTMENTS = [
+  "Accounting", "Agricultural Economics", "Anatomy", "Architecture", "Biochemistry", 
+  "Business Administration", "Chemical Engineering", "Chemistry", "Civil Engineering", 
+  "Computer Science", "Dentistry", "Economics", "Electrical/Electronics Engineering", 
+  "English Language", "Estate Management", "Finance", "History and International Studies", 
+  "Law", "Mass Communication", "Mathematics", "Mechanical Engineering", "Medicine and Surgery", 
+  "Microbiology", "Nursing Science", "Pharmacy", "Physics", "Physiology", "Political Science", 
+  "Psychology", "Public Administration", "Sociology", "Statistics", "Surveying and Geoinformatics"
+];
+
+const COMMON_COURSES = [
+  { code: "GST111", title: "Communication in English I", units: 2 },
+  { code: "GST112", title: "Logic, Philosophy and Human Existence", units: 2 },
+  { code: "GST113", title: "Nigerian Peoples and Culture", units: 2 },
+  { code: "GST121", title: "Use of Library, Study Skills and ICT", units: 2 },
+  { code: "GST122", title: "Communication in English II", units: 2 },
+  { code: "GST123", title: "Basic Communication in French", units: 2 },
+  { code: "MTH101", title: "Elementary Mathematics I", units: 3 },
+  { code: "MTH102", title: "Elementary Mathematics II", units: 3 },
+  { code: "PHY101", title: "General Physics I", units: 3 },
+  { code: "PHY102", title: "General Physics II", units: 3 },
+  { code: "CHM101", title: "General Chemistry I", units: 3 },
+  { code: "CHM102", title: "General Chemistry II", units: 3 },
+  { code: "BIO101", title: "General Biology I", units: 3 },
+  { code: "BIO102", title: "General Biology II", units: 3 },
+  { code: "CSC101", title: "Introduction to Computer Science", units: 3 },
+  { code: "ECO101", title: "Principles of Economics I", units: 3 },
+  { code: "ACC101", title: "Introduction to Financial Accounting I", units: 3 },
+  { code: "BUS101", title: "Introduction to Business I", units: 3 },
+  { code: "POL101", title: "Introduction to Political Science", units: 3 },
+  { code: "SOC101", title: "Introduction to Sociology", units: 3 }
+];
 
 export default function AdminDashboard() {
   const { profile } = useAuth();
@@ -95,7 +149,8 @@ export default function AdminDashboard() {
     try {
       const { id, ...data } = metadata;
       await setDoc(doc(db, 'metadata', 'app-config'), data);
-      alert('Metadata updated successfully!');
+      // Removed alert, using a simple console log or you could add a toast state
+      console.log('Metadata updated successfully!');
     } catch (error) {
       console.error('Error updating metadata:', error);
     }
@@ -126,6 +181,45 @@ export default function AdminDashboard() {
     setNewCourse({ code: '', title: '', units: 3 });
   };
 
+  const handleSeedData = async () => {
+    if (!metadata) return;
+    
+    // Removed window.confirm as it is blocked in the iframe
+    try {
+      const updated = { ...metadata };
+      
+      // Merge uniquely
+      NIGERIAN_UNIVERSITIES.forEach(uni => {
+        if (!updated.institutions.includes(uni)) updated.institutions.push(uni);
+      });
+      
+      COMMON_FACULTIES.forEach(fac => {
+        if (!updated.faculties.includes(fac)) updated.faculties.push(fac);
+      });
+      
+      COMMON_DEPARTMENTS.forEach(dep => {
+        if (!updated.departments.includes(dep)) updated.departments.push(dep);
+      });
+      
+      COMMON_COURSES.forEach(course => {
+        const exists = updated.courseTemplates.some(c => c.code === course.code);
+        if (!exists) updated.courseTemplates.push(course);
+      });
+
+      // Sort alphabetically for better UX
+      updated.institutions.sort();
+      updated.faculties.sort();
+      updated.departments.sort();
+      updated.courseTemplates.sort((a, b) => a.code.localeCompare(b.code));
+
+      const { id, ...data } = updated;
+      await setDoc(doc(db, 'metadata', 'app-config'), data);
+      console.log('Nigerian Universities data seeded successfully!');
+    } catch (error) {
+      console.error('Error seeding data:', error);
+    }
+  };
+
   return (
     <div className="space-y-8">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
@@ -133,25 +227,36 @@ export default function AdminDashboard() {
           <h1 className="text-3xl font-bold text-slate-900">Admin Dashboard</h1>
           <p className="text-slate-600">Manage institutions, users, and academic metadata.</p>
         </div>
-        <div className="flex bg-white rounded-xl shadow-sm border border-slate-200 p-1">
-          <button
-            onClick={() => setActiveTab('overview')}
-            className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${activeTab === 'overview' ? 'bg-indigo-600 text-white shadow-sm' : 'text-slate-600 hover:bg-slate-50'}`}
-          >
-            Overview
-          </button>
-          <button
-            onClick={() => setActiveTab('users')}
-            className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${activeTab === 'users' ? 'bg-indigo-600 text-white shadow-sm' : 'text-slate-600 hover:bg-slate-50'}`}
-          >
-            Users
-          </button>
-          <button
-            onClick={() => setActiveTab('metadata')}
-            className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${activeTab === 'metadata' ? 'bg-indigo-600 text-white shadow-sm' : 'text-slate-600 hover:bg-slate-50'}`}
-          >
-            Metadata
-          </button>
+        <div className="flex flex-col sm:flex-row gap-4">
+          {activeTab === 'metadata' && (
+            <button
+              onClick={handleSeedData}
+              className="flex items-center justify-center space-x-2 bg-emerald-600 text-white px-4 py-2 rounded-xl text-sm font-medium hover:bg-emerald-700 transition-colors shadow-sm"
+            >
+              <Database className="h-4 w-4" />
+              <span>Seed Nigerian Data</span>
+            </button>
+          )}
+          <div className="flex bg-white rounded-xl shadow-sm border border-slate-200 p-1">
+            <button
+              onClick={() => setActiveTab('overview')}
+              className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${activeTab === 'overview' ? 'bg-indigo-600 text-white shadow-sm' : 'text-slate-600 hover:bg-slate-50'}`}
+            >
+              Overview
+            </button>
+            <button
+              onClick={() => setActiveTab('users')}
+              className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${activeTab === 'users' ? 'bg-indigo-600 text-white shadow-sm' : 'text-slate-600 hover:bg-slate-50'}`}
+            >
+              Users
+            </button>
+            <button
+              onClick={() => setActiveTab('metadata')}
+              className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${activeTab === 'metadata' ? 'bg-indigo-600 text-white shadow-sm' : 'text-slate-600 hover:bg-slate-50'}`}
+            >
+              Metadata
+            </button>
+          </div>
         </div>
       </div>
 

@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { useData } from '../contexts/DataContext';
 import { useAuth } from '../contexts/AuthContext';
-import { doc, getDoc } from 'firebase/firestore';
+import { doc, getDoc, deleteField } from 'firebase/firestore';
 import { db } from '../firebase';
 import { AppMetadata } from '../types';
 import { calculateGPA, getGradePoint } from '../utils/gpa';
@@ -69,19 +69,27 @@ export default function SemesterDetail() {
     e.preventDefault();
     const gradePoint = getGradePoint(formData.grade, profile?.gradingScale || 5.0);
     
+    const courseData: any = {
+      code: formData.code,
+      title: formData.title,
+      units: formData.units,
+      grade: formData.grade,
+      gradePoint
+    };
+
+    if (formData.score !== '') {
+      courseData.score = Number(formData.score);
+    } else if (editingId) {
+      courseData.score = deleteField();
+    }
+    
     if (editingId) {
-      await updateCourse(editingId, {
-        ...formData,
-        score: formData.score ? Number(formData.score) : undefined,
-        gradePoint
-      });
+      await updateCourse(editingId, courseData);
       setEditingId(null);
     } else {
       await addCourse({
         semesterId: id!,
-        ...formData,
-        score: formData.score ? Number(formData.score) : undefined,
-        gradePoint
+        ...courseData
       });
       setIsAdding(false);
     }
