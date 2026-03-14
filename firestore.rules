@@ -113,6 +113,7 @@ service cloud.firestore {
              data.units is number && data.units >= 0 && data.units <= 10 &&
              data.grade is string && data.grade.size() > 0 && data.grade.size() <= 5 &&
              (!( 'score' in data ) || (data.score is number && data.score >= 0 && data.score <= 100)) &&
+             (!( 'isCarryover' in data ) || data.isCarryover is bool) &&
              data.gradePoint is number && data.gradePoint >= 0 && data.gradePoint <= 5.0;
     }
 

@@ -48,26 +48,131 @@ const COMMON_DEPARTMENTS = [
 ];
 
 const COMMON_COURSES = [
+  // General Studies (GST)
   { code: "GST111", title: "Communication in English I", units: 2 },
   { code: "GST112", title: "Logic, Philosophy and Human Existence", units: 2 },
   { code: "GST113", title: "Nigerian Peoples and Culture", units: 2 },
   { code: "GST121", title: "Use of Library, Study Skills and ICT", units: 2 },
   { code: "GST122", title: "Communication in English II", units: 2 },
   { code: "GST123", title: "Basic Communication in French", units: 2 },
-  { code: "MTH101", title: "Elementary Mathematics I", units: 3 },
-  { code: "MTH102", title: "Elementary Mathematics II", units: 3 },
-  { code: "PHY101", title: "General Physics I", units: 3 },
-  { code: "PHY102", title: "General Physics II", units: 3 },
-  { code: "CHM101", title: "General Chemistry I", units: 3 },
-  { code: "CHM102", title: "General Chemistry II", units: 3 },
+  { code: "GST211", title: "History and Philosophy of Science", units: 2 },
+  { code: "GST212", title: "Peace and Conflict Resolution", units: 2 },
+  { code: "GST221", title: "Entrepreneurship and Innovation", units: 2 },
+
+  // Sciences
+  { code: "MTH101", title: "Elementary Mathematics I (Algebra and Trigonometry)", units: 3 },
+  { code: "MTH102", title: "Elementary Mathematics II (Calculus)", units: 3 },
+  { code: "MTH201", title: "Mathematical Methods I", units: 3 },
+  { code: "PHY101", title: "General Physics I (Mechanics & Properties of Matter)", units: 3 },
+  { code: "PHY102", title: "General Physics II (Electricity & Magnetism)", units: 3 },
+  { code: "PHY107", title: "General Physics Laboratory I", units: 1 },
+  { code: "PHY108", title: "General Physics Laboratory II", units: 1 },
+  { code: "CHM101", title: "General Chemistry I (Physical & Inorganic)", units: 3 },
+  { code: "CHM102", title: "General Chemistry II (Organic & Practical)", units: 3 },
+  { code: "CHM107", title: "General Practical Chemistry I", units: 1 },
+  { code: "CHM108", title: "General Practical Chemistry II", units: 1 },
   { code: "BIO101", title: "General Biology I", units: 3 },
   { code: "BIO102", title: "General Biology II", units: 3 },
+  { code: "BIO107", title: "General Biology Practical I", units: 1 },
+  { code: "BIO108", title: "General Biology Practical II", units: 1 },
+  { code: "STA111", title: "Descriptive Statistics", units: 3 },
+  { code: "STA112", title: "Probability I", units: 3 },
+
+  // Computing & IT (100 - 400 Level)
   { code: "CSC101", title: "Introduction to Computer Science", units: 3 },
+  { code: "CSC102", title: "Introduction to Problem Solving", units: 3 },
+  { code: "CSC201", title: "Computer Programming I", units: 3 },
+  { code: "CSC202", title: "Computer Programming II", units: 3 },
+  { code: "CSC204", title: "Fundamentals of Data Structures", units: 3 },
+  { code: "CSC205", title: "Operating Systems I", units: 3 },
+  { code: "CSC208", title: "Discrete Mathematics", units: 3 },
+  { code: "CSC301", title: "Object-Oriented Programming", units: 3 },
+  { code: "CSC302", title: "Object-Oriented Design and Analysis", units: 3 },
+  { code: "CSC304", title: "Data Management I (Databases)", units: 3 },
+  { code: "CSC305", title: "Operating Systems II", units: 3 },
+  { code: "CSC308", title: "Formal Methods and Automata Theory", units: 3 },
+  { code: "CSC310", title: "Computer Architecture and Organization", units: 3 },
+  { code: "CSC314", title: "Artificial Intelligence", units: 3 },
+  { code: "CSC315", title: "Introduction to Computer Networks", units: 3 },
+  { code: "CSC399", title: "Industrial Training (SIWES)", units: 6 },
+  { code: "CSC401", title: "Software Engineering", units: 3 },
+  { code: "CSC403", title: "Net-Centric Computing", units: 3 },
+  { code: "CSC404", title: "Data Management II", units: 3 },
+  { code: "CSC411", title: "Organization of Programming Languages", units: 3 },
+  { code: "CSC414", title: "Compiler Construction", units: 3 },
+  { code: "CSC415", title: "Computer Graphics and Visualization", units: 3 },
+  { code: "CSC421", title: "Human-Computer Interaction", units: 2 },
+  { code: "CSC499", title: "Project", units: 6 },
+
+  // Software Engineering
+  { code: "SEN201", title: "Introduction to Software Engineering", units: 3 },
+  { code: "SEN301", title: "Software Requirements Engineering", units: 3 },
+  { code: "SEN302", title: "Software Architecture and Design", units: 3 },
+  { code: "SEN401", title: "Software Testing and Quality Assurance", units: 3 },
+  { code: "SEN402", title: "Software Project Management", units: 3 },
+
+  // Cybersecurity
+  { code: "CYB201", title: "Introduction to Cybersecurity", units: 3 },
+  { code: "CYB301", title: "Cryptography and Network Security", units: 3 },
+  { code: "CYB302", title: "Ethical Hacking and Penetration Testing", units: 3 },
+  { code: "CYB401", title: "Digital Forensics and Incident Response", units: 3 },
+  { code: "CYB402", title: "Information Security Policy and Law", units: 2 },
+
+  // Information Technology / Systems
+  { code: "IFT201", title: "Web Technologies and Development", units: 3 },
+  { code: "IFT301", title: "Systems Analysis and Design", units: 3 },
+  { code: "IFT302", title: "Information Security", units: 3 },
+  { code: "IFT401", title: "Cloud Computing", units: 3 },
+  { code: "IFT402", title: "Internet of Things (IoT)", units: 3 },
+
+  // Engineering
+  { code: "ENG101", title: "Workshop Practice I", units: 1 },
+  { code: "ENG102", title: "Workshop Practice II", units: 1 },
+  { code: "ENG103", title: "Engineering Drawing I", units: 2 },
+  { code: "ENG104", title: "Engineering Drawing II", units: 2 },
+  { code: "MEE201", title: "Engineering Mechanics I (Statics)", units: 3 },
+  { code: "MEE202", title: "Engineering Mechanics II (Dynamics)", units: 3 },
+  { code: "EEE201", title: "Basic Electrical Engineering I", units: 3 },
+  { code: "EEE202", title: "Basic Electrical Engineering II", units: 3 },
+
+  // Social Sciences & Management
   { code: "ECO101", title: "Principles of Economics I", units: 3 },
+  { code: "ECO102", title: "Principles of Economics II", units: 3 },
   { code: "ACC101", title: "Introduction to Financial Accounting I", units: 3 },
+  { code: "ACC102", title: "Introduction to Financial Accounting II", units: 3 },
   { code: "BUS101", title: "Introduction to Business I", units: 3 },
+  { code: "BUS102", title: "Introduction to Business II", units: 3 },
   { code: "POL101", title: "Introduction to Political Science", units: 3 },
-  { code: "SOC101", title: "Introduction to Sociology", units: 3 }
+  { code: "POL102", title: "Nigerian Government and Politics", units: 3 },
+  { code: "SOC101", title: "Introduction to Sociology", units: 3 },
+  { code: "PSY101", title: "Introduction to Psychology", units: 3 },
+  { code: "MAC101", title: "Introduction to Mass Communication", units: 3 },
+
+  // Arts & Humanities
+  { code: "ENG111", title: "Spoken English", units: 3 },
+  { code: "ENG112", title: "Introduction to Literature in English", units: 3 },
+  { code: "HIS101", title: "History of Africa from 1500 to 1800", units: 3 },
+  { code: "PHI101", title: "Introduction to Philosophy", units: 3 },
+
+  // Law
+  { code: "LAW101", title: "Legal Method I", units: 3 },
+  { code: "LAW102", title: "Legal Method II", units: 3 },
+  { code: "LAW201", title: "Law of Contract I", units: 4 },
+  { code: "LAW202", title: "Law of Contract II", units: 4 },
+
+  // Medical & Health Sciences
+  { code: "ANA201", title: "Gross Anatomy I", units: 3 },
+  { code: "ANA202", title: "Gross Anatomy II", units: 3 },
+  { code: "PHS201", title: "General Physiology I", units: 3 },
+  { code: "PHS202", title: "General Physiology II", units: 3 },
+  { code: "BCH201", title: "General Biochemistry I", units: 3 },
+  { code: "BCH202", title: "General Biochemistry II", units: 3 },
+  { code: "MCB201", title: "General Microbiology I", units: 3 },
+  { code: "MCB202", title: "General Microbiology II", units: 3 },
+
+  // Agriculture
+  { code: "AGR101", title: "Introduction to Agriculture", units: 2 },
+  { code: "AGR201", title: "General Agriculture", units: 2 }
 ];
 
 export default function AdminDashboard() {

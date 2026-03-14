@@ -60,6 +60,7 @@ export interface Course {
   grade: string;
   score?: number;
   gradePoint: number;
+  isCarryover?: boolean;
   createdAt?: string;
 }
 
