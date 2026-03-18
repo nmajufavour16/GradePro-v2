@@ -3,6 +3,7 @@ import { Outlet, Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { BookOpen, LayoutDashboard, LogOut, Menu, X, FileText, Sparkles, ShieldCheck, ChevronLeft, ChevronRight } from 'lucide-react';
 import FloatingAIChat from './FloatingAIChat';
+import { GradeProLogo } from './GradeProLogo';
 
 export default function Layout() {
   const { user, profile, logout } = useAuth();
@@ -28,10 +29,7 @@ export default function Layout() {
     <div className="min-h-screen bg-slate-50 flex flex-col md:flex-row">
       {/* Mobile Header */}
       <div className="md:hidden flex items-center justify-between p-4 bg-white border-b border-slate-200">
-        <div className="flex items-center space-x-2">
-          <BookOpen className="h-6 w-6 text-indigo-600" />
-          <span className="font-bold text-xl text-slate-900">GradePro</span>
-        </div>
+        <GradeProLogo className="h-8" />
         <button onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)} className="p-2 text-slate-600">
           {isMobileMenuOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
         </button>
@@ -53,9 +51,8 @@ export default function Layout() {
             {isCollapsed ? <ChevronRight className="h-4 w-4" /> : <ChevronLeft className="h-4 w-4" />}
           </button>
 
-          <div className={`p-6 hidden md:flex items-center ${isCollapsed ? 'justify-center' : 'space-x-2'}`}>
-            <BookOpen className="h-8 w-8 text-indigo-600 shrink-0" />
-            {!isCollapsed && <span className="font-bold text-2xl text-slate-900 truncate">GradePro</span>}
+          <div className={`p-6 hidden md:flex items-center ${isCollapsed ? 'justify-center' : ''}`}>
+            <GradeProLogo className="h-10 shrink-0" />
           </div>
 
           <nav className="flex-1 px-4 py-6 space-y-1">

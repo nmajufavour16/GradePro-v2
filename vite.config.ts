@@ -12,7 +12,7 @@ export default defineConfig(({mode}) => {
       tailwindcss(),
       VitePWA({
         registerType: 'autoUpdate',
-        includeAssets: ['icon.svg'],
+        includeAssets: ['logo.png'],
         manifest: {
           name: 'GradePro: CGPA Calculator and AI Study Help',
           short_name: 'GradePro',
@@ -22,15 +22,15 @@ export default defineConfig(({mode}) => {
           display: 'standalone',
           icons: [
             {
-              src: 'icon.svg',
+              src: 'logo.png',
               sizes: '192x192',
-              type: 'image/svg+xml',
+              type: 'image/png',
               purpose: 'any maskable'
             },
             {
-              src: 'icon.svg',
+              src: 'logo.png',
               sizes: '512x512',
-              type: 'image/svg+xml',
+              type: 'image/png',
               purpose: 'any maskable'
             }
           ]

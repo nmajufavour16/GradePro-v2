@@ -2,6 +2,7 @@ import React from 'react';
 import { Navigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { BookOpen, TrendingUp, BrainCircuit, FileText } from 'lucide-react';
+import { GradeProLogo } from '../components/GradeProLogo';
 
 export default function Landing() {
   const { user, login } = useAuth();
@@ -13,10 +14,7 @@ export default function Landing() {
   return (
     <div className="min-h-screen bg-slate-50 flex flex-col">
       <header className="px-6 py-4 flex items-center justify-between bg-white border-b border-slate-200">
-        <div className="flex items-center space-x-2">
-          <BookOpen className="h-8 w-8 text-indigo-600" />
-          <span className="font-bold text-2xl text-slate-900">GradePro</span>
-        </div>
+        <GradeProLogo className="h-10" />
         <button
           onClick={login}
           className="px-6 py-2 bg-indigo-600 text-white font-medium rounded-xl hover:bg-indigo-700 transition-colors"

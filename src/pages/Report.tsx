@@ -4,6 +4,7 @@ import { useData } from '../contexts/DataContext';
 import { calculateCGPA, calculateGPA } from '../utils/gpa';
 import { useReactToPrint } from 'react-to-print';
 import { Printer, Download, BookOpen, GraduationCap } from 'lucide-react';
+import { GradeProLogo } from '../components/GradeProLogo';
 
 export default function Report() {
   const { profile } = useAuth();
@@ -39,11 +40,7 @@ export default function Report() {
           {/* Report Header */}
           <div className="flex items-center justify-between border-b-2 border-slate-900 pb-6 mb-8">
             <div className="flex items-center space-x-3">
-              <BookOpen className="h-10 w-10 text-indigo-600" />
-              <div>
-                <h2 className="text-2xl font-black text-slate-900 tracking-tight uppercase">GradePro</h2>
-                <p className="text-sm font-medium text-slate-500 uppercase tracking-widest">Academic Report</p>
-              </div>
+              <GradeProLogo className="h-12" />
             </div>
             <div className="text-right">
               <p className="text-sm text-slate-500">Date Generated</p>

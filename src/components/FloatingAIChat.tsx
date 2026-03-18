@@ -1,15 +1,16 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { collection, query, where, onSnapshot, addDoc, doc, updateDoc } from 'firebase/firestore';
+import { collection, query, where, onSnapshot, addDoc, doc, updateDoc, deleteDoc, getDocs } from 'firebase/firestore';
 import { db } from '../firebase';
 import { useAuth } from '../contexts/AuthContext';
 import { useData } from '../contexts/DataContext';
 import { calculateCGPA } from '../utils/gpa';
 import { GoogleGenAI } from '@google/genai';
 import ReactMarkdown from 'react-markdown';
-import { MessageCircle, Send, Loader2, Sparkles, Plus, X, ChevronLeft, ChevronRight, History } from 'lucide-react';
+import { MessageCircle, Send, Loader2, Sparkles, Plus, X, ChevronLeft, ChevronRight, History, Mic, Square, Trash2 } from 'lucide-react';
 import { ChatSession, ChatMessage } from '../types';
 import { motion, AnimatePresence } from 'motion/react';
 import { useLocation } from 'react-router-dom';
+import { useAudioRecorder } from '../hooks/useAudioRecorder';
 
 export default function FloatingAIChat() {
   const { user, profile } = useAuth();
@@ -23,6 +24,10 @@ export default function FloatingAIChat() {
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [isHistoryCollapsed, setIsHistoryCollapsed] = useState(false);
+  
+  const { isRecording, isTranscribing, startRecording, stopRecording } = useAudioRecorder((text) => {
+    setInput(prev => prev + (prev ? ' ' : '') + text);
+  });
   
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
@@ -106,6 +111,25 @@ export default function FloatingAIChat() {
       setShowHistory(false);
     } catch (error) {
       console.error("Error creating session", error);
+    }
+  };
+
+  const deleteSession = async (e: React.MouseEvent, sessionId: string) => {
+    e.stopPropagation();
+    try {
+      await deleteDoc(doc(db, 'chatSessions', sessionId));
+      
+      const q = query(collection(db, 'chatMessages'), where('chatId', '==', sessionId));
+      const snapshot = await getDocs(q);
+      const deletePromises = snapshot.docs.map(messageDoc => deleteDoc(doc(db, 'chatMessages', messageDoc.id)));
+      await Promise.all(deletePromises);
+
+      if (activeSessionId === sessionId) {
+        const remainingSessions = sessions.filter(s => s.id !== sessionId);
+        setActiveSessionId(remainingSessions.length > 0 ? remainingSessions[0].id : null);
+      }
+    } catch (error) {
+      console.error("Error deleting session:", error);
     }
   };
 
@@ -321,21 +345,31 @@ export default function FloatingAIChat() {
                     </div>
                     <div className="flex-1 overflow-y-auto p-2 space-y-1">
                       {sessions.map(session => (
-                        <button
-                          key={session.id}
-                          onClick={() => {
-                            setActiveSessionId(session.id);
-                            if (window.innerWidth < 768) setShowHistory(false);
-                          }}
-                          title={isHistoryCollapsed ? session.title : ''}
-                          className={`w-full text-left px-2 py-2 rounded-lg text-xs transition-colors flex items-center space-x-2
-                            ${isHistoryCollapsed ? 'justify-center' : ''}
-                            ${activeSessionId === session.id ? 'bg-indigo-100 text-indigo-900 font-medium' : 'text-slate-600 hover:bg-slate-200'}
-                          `}
-                        >
-                          <MessageCircle className="h-3 w-3 shrink-0" />
-                          {!isHistoryCollapsed && <span className="truncate">{session.title}</span>}
-                        </button>
+                        <div key={session.id} className="relative group">
+                          <button
+                            onClick={() => {
+                              setActiveSessionId(session.id);
+                              if (window.innerWidth < 768) setShowHistory(false);
+                            }}
+                            title={isHistoryCollapsed ? session.title : ''}
+                            className={`w-full text-left px-2 py-2 rounded-lg text-xs transition-colors flex items-center space-x-2 pr-8
+                              ${isHistoryCollapsed ? 'justify-center pr-2' : ''}
+                              ${activeSessionId === session.id ? 'bg-indigo-100 text-indigo-900 font-medium' : 'text-slate-600 hover:bg-slate-200'}
+                            `}
+                          >
+                            <MessageCircle className="h-3 w-3 shrink-0" />
+                            {!isHistoryCollapsed && <span className="truncate">{session.title}</span>}
+                          </button>
+                          {!isHistoryCollapsed && (
+                            <button
+                              onClick={(e) => deleteSession(e, session.id)}
+                              className="absolute right-1 top-1/2 -translate-y-1/2 p-1 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded opacity-0 group-hover:opacity-100 transition-all"
+                              title="Delete Chat"
+                            >
+                              <Trash2 className="h-3 w-3" />
+                            </button>
+                          )}
+                        </div>
                       ))}
                     </div>
                   </motion.div>
@@ -382,6 +416,14 @@ export default function FloatingAIChat() {
                       </div>
                     </div>
                   )}
+                  {isTranscribing && (
+                    <div className="flex justify-start">
+                      <div className="bg-slate-50 p-3 rounded-2xl rounded-tl-none border border-slate-100 shadow-sm flex items-center space-x-2">
+                        <Loader2 className="h-4 w-4 text-indigo-600 animate-spin" />
+                        <span className="text-xs text-slate-500">Transcribing...</span>
+                      </div>
+                    </div>
+                  )}
                   <div ref={messagesEndRef} />
                 </div>
 
@@ -393,12 +435,31 @@ export default function FloatingAIChat() {
                       value={input}
                       onChange={(e) => setInput(e.target.value)}
                       onKeyDown={(e) => e.key === 'Enter' && handleSend()}
-                      placeholder="Ask GradePro AI..."
-                      className="flex-1 px-4 py-2 bg-slate-50 border border-slate-200 focus:bg-white focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 rounded-xl text-sm transition-all outline-none"
+                      placeholder={isRecording ? "Recording..." : "Ask GradePro AI..."}
+                      disabled={isRecording || isTranscribing}
+                      className="flex-1 px-4 py-2 bg-slate-50 border border-slate-200 focus:bg-white focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 rounded-xl text-sm transition-all outline-none disabled:opacity-50"
                     />
+                    {isRecording ? (
+                      <button
+                        onClick={stopRecording}
+                        className="p-2 bg-red-500 text-white rounded-xl hover:bg-red-600 transition-colors animate-pulse"
+                        title="Stop Recording"
+                      >
+                        <Square className="h-4 w-4" />
+                      </button>
+                    ) : (
+                      <button
+                        onClick={startRecording}
+                        disabled={isLoading || isTranscribing}
+                        className="p-2 bg-slate-100 text-slate-600 rounded-xl hover:bg-slate-200 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                        title="Voice Message"
+                      >
+                        <Mic className="h-4 w-4" />
+                      </button>
+                    )}
                     <button
                       onClick={handleSend}
-                      disabled={!input.trim() || isLoading}
+                      disabled={!input.trim() || isLoading || isTranscribing || isRecording}
                       className="p-2 bg-indigo-600 text-white rounded-xl hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                     >
                       <Send className="h-4 w-4" />

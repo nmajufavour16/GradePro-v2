@@ -1,14 +1,15 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { collection, query, where, orderBy, onSnapshot, addDoc, serverTimestamp, doc, getDocs, updateDoc } from 'firebase/firestore';
+import { collection, query, where, orderBy, onSnapshot, addDoc, serverTimestamp, doc, getDocs, updateDoc, deleteDoc } from 'firebase/firestore';
 import { db } from '../firebase';
 import { useAuth } from '../contexts/AuthContext';
 import { useData } from '../contexts/DataContext';
 import { calculateCGPA } from '../utils/gpa';
 import { GoogleGenAI } from '@google/genai';
 import ReactMarkdown from 'react-markdown';
-import { MessageCircle, Send, Loader2, Sparkles, Plus, Trash2, History, X, Menu, ChevronLeft, ChevronRight } from 'lucide-react';
+import { MessageCircle, Send, Loader2, Sparkles, Plus, Trash2, History, X, Menu, ChevronLeft, ChevronRight, Mic, Square } from 'lucide-react';
 import { ChatSession, ChatMessage } from '../types';
 import { motion, AnimatePresence } from 'motion/react';
+import { useAudioRecorder } from '../hooks/useAudioRecorder';
 
 export default function AIChat() {
   const { user, profile } = useAuth();
@@ -21,6 +22,10 @@ export default function AIChat() {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   
+  const { isRecording, isTranscribing, startRecording, stopRecording } = useAudioRecorder((text) => {
+    setInput(prev => prev + (prev ? ' ' : '') + text);
+  });
+
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   // Load chat sessions
@@ -96,6 +101,25 @@ export default function AIChat() {
       setActiveSessionId(docRef.id);
     } catch (error) {
       console.error("Error creating session", error);
+    }
+  };
+
+  const deleteSession = async (e: React.MouseEvent, sessionId: string) => {
+    e.stopPropagation();
+    try {
+      await deleteDoc(doc(db, 'chatSessions', sessionId));
+      
+      const q = query(collection(db, 'chatMessages'), where('chatId', '==', sessionId));
+      const snapshot = await getDocs(q);
+      const deletePromises = snapshot.docs.map(messageDoc => deleteDoc(doc(db, 'chatMessages', messageDoc.id)));
+      await Promise.all(deletePromises);
+
+      if (activeSessionId === sessionId) {
+        const remainingSessions = sessions.filter(s => s.id !== sessionId);
+        setActiveSessionId(remainingSessions.length > 0 ? remainingSessions[0].id : null);
+      }
+    } catch (error) {
+      console.error("Error deleting session:", error);
     }
   };
 
@@ -269,21 +293,31 @@ export default function AIChat() {
           </div>
           <div className="flex-1 overflow-y-auto p-2 space-y-1">
             {sessions.map(session => (
-              <button
-                key={session.id}
-                onClick={() => {
-                  setActiveSessionId(session.id);
-                  setIsSidebarOpen(false);
-                }}
-                title={isSidebarCollapsed ? session.title : ''}
-                className={`w-full text-left px-3 py-3 rounded-xl text-sm transition-colors flex items-center space-x-3
-                  ${isSidebarCollapsed ? 'justify-center' : ''}
-                  ${activeSessionId === session.id ? 'bg-indigo-100 text-indigo-900 font-medium' : 'text-slate-600 hover:bg-slate-200'}
-                `}
-              >
-                <MessageCircle className="h-4 w-4 shrink-0" />
-                {!isSidebarCollapsed && <span className="truncate">{session.title}</span>}
-              </button>
+              <div key={session.id} className="relative group">
+                <button
+                  onClick={() => {
+                    setActiveSessionId(session.id);
+                    setIsSidebarOpen(false);
+                  }}
+                  title={isSidebarCollapsed ? session.title : ''}
+                  className={`w-full text-left px-3 py-3 rounded-xl text-sm transition-colors flex items-center space-x-3 pr-10
+                    ${isSidebarCollapsed ? 'justify-center pr-3' : ''}
+                    ${activeSessionId === session.id ? 'bg-indigo-100 text-indigo-900 font-medium' : 'text-slate-600 hover:bg-slate-200'}
+                  `}
+                >
+                  <MessageCircle className="h-4 w-4 shrink-0" />
+                  {!isSidebarCollapsed && <span className="truncate">{session.title}</span>}
+                </button>
+                {!isSidebarCollapsed && (
+                  <button
+                    onClick={(e) => deleteSession(e, session.id)}
+                    className="absolute right-2 top-1/2 -translate-y-1/2 p-1.5 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-lg opacity-0 group-hover:opacity-100 transition-all"
+                    title="Delete Chat"
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </button>
+                )}
+              </div>
             ))}
             {sessions.length === 0 && !isSidebarCollapsed && (
               <div className="text-center text-slate-500 text-sm p-4">
@@ -368,6 +402,14 @@ export default function AIChat() {
               </div>
             </div>
           )}
+          {isTranscribing && (
+            <div className="flex justify-start">
+              <div className="bg-slate-50 p-4 rounded-2xl rounded-tl-none border border-slate-100 flex items-center space-x-2">
+                <Loader2 className="h-4 w-4 text-indigo-600 animate-spin" />
+                <span className="text-sm text-slate-500">Transcribing audio...</span>
+              </div>
+            </div>
+          )}
           <div ref={messagesEndRef} />
         </div>
 
@@ -379,12 +421,31 @@ export default function AIChat() {
               value={input}
               onChange={(e) => setInput(e.target.value)}
               onKeyDown={(e) => e.key === 'Enter' && handleSend()}
-              placeholder="Message GradePro AI..."
-              className="flex-1 px-4 py-3 bg-slate-50 border border-slate-200 focus:bg-white focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 rounded-xl text-sm transition-all outline-none"
+              placeholder={isRecording ? "Recording..." : "Message GradePro AI..."}
+              disabled={isRecording || isTranscribing}
+              className="flex-1 px-4 py-3 bg-slate-50 border border-slate-200 focus:bg-white focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 rounded-xl text-sm transition-all outline-none disabled:opacity-50"
             />
+            {isRecording ? (
+              <button
+                onClick={stopRecording}
+                className="p-3 bg-red-500 text-white rounded-xl hover:bg-red-600 transition-colors animate-pulse"
+                title="Stop Recording"
+              >
+                <Square className="h-5 w-5" />
+              </button>
+            ) : (
+              <button
+                onClick={startRecording}
+                disabled={isLoading || isTranscribing}
+                className="p-3 bg-slate-100 text-slate-600 rounded-xl hover:bg-slate-200 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                title="Voice Message"
+              >
+                <Mic className="h-5 w-5" />
+              </button>
+            )}
             <button
               onClick={handleSend}
-              disabled={!input.trim() || isLoading}
+              disabled={!input.trim() || isLoading || isTranscribing || isRecording}
               className="p-3 bg-indigo-600 text-white rounded-xl hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
             >
               <Send className="h-5 w-5" />
