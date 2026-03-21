@@ -1,13 +1,13 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { collection, query, where, orderBy, onSnapshot, addDoc, serverTimestamp, doc, getDocs, updateDoc, deleteDoc } from 'firebase/firestore';
-import { db } from '@/src/firebase';
-import { useAuth } from '@/src/contexts/AuthContext';
-import { useData } from '@/src/contexts/DataContext';
-import { calculateCGPA } from '@/src/utils/gpa';
+import { db } from '../firebase';
+import { useAuth } from '../contexts/AuthContext';
+import { useData } from '../contexts/DataContext';
+import { calculateCGPA } from '../utils/gpa';
 import { GoogleGenAI } from '@google/genai';
 import ReactMarkdown from 'react-markdown';
 import { MessageCircle, Send, Loader2, Sparkles, Plus, Trash2, History, X, Menu, ChevronLeft, ChevronRight, Mic, Square } from 'lucide-react';
-import { ChatSession, ChatMessage } from '@/src/types';
+import { ChatSession, ChatMessage } from '../types';
 import { motion, AnimatePresence } from 'motion/react';
 import { useAudioRecorder } from '../hooks/useAudioRecorder';
 

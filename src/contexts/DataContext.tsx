@@ -1,9 +1,9 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { collection, query, where, onSnapshot, addDoc, updateDoc, deleteDoc, doc } from 'firebase/firestore';
-import { db } from '@/src/firebase';
-import { Semester, Course, OperationType } from '@/src/types';
+import { db } from '../firebase';
+import { Semester, Course, OperationType } from '../types';
 import { useAuth } from './AuthContext';
-import { handleFirestoreError } from '@/src/utils/firebaseErrors';
+import { handleFirestoreError } from '../utils/firebaseErrors';
 
 interface DataContextType {
   semesters: Semester[];

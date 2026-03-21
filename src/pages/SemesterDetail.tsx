@@ -2,6 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { useData } from '../contexts/DataContext';
 import { useAuth } from '../contexts/AuthContext';
+import { doc, getDoc, deleteField } from 'firebase/firestore';
+import { db } from '../firebase';
 import { AppMetadata } from '../types';
 import { calculateGPA, getGradePoint } from '../utils/gpa';
 import { ArrowLeft, Plus, Trash2, Edit2, Check, X } from 'lucide-react';
@@ -31,13 +33,9 @@ export default function SemesterDetail() {
 
   useEffect(() => {
     const fetchMetadata = async () => {
-      try {
-        const res = await fetch('/api/metadata');
-        if (res.ok) {
-          setMetadata(await res.json());
-        }
-      } catch (error) {
-        console.error('Error fetching metadata:', error);
+      const docSnap = await getDoc(doc(db, 'metadata', 'app-config'));
+      if (docSnap.exists()) {
+        setMetadata(docSnap.data() as AppMetadata);
       }
     };
     fetchMetadata();
@@ -48,7 +46,7 @@ export default function SemesterDetail() {
     setFormData({ ...formData, code: upperCode });
     
     // Auto-fill title and units if template exists
-    const template = metadata?.courseTemplates?.find(t => t.code === upperCode);
+    const template = metadata?.courseTemplates.find(t => t.code === upperCode);
     if (template) {
       setFormData(prev => ({
         ...prev,
@@ -84,7 +82,7 @@ export default function SemesterDetail() {
     if (formData.score !== '') {
       courseData.score = Number(formData.score);
     } else if (editingId) {
-      courseData.score = null;
+      courseData.score = deleteField();
     }
     
     if (editingId) {

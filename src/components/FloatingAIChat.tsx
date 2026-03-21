@@ -1,4 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
+import { collection, query, where, onSnapshot, addDoc, doc, updateDoc, deleteDoc, getDocs } from 'firebase/firestore';
+import { db } from '../firebase';
 import { useAuth } from '../contexts/AuthContext';
 import { useData } from '../contexts/DataContext';
 import { calculateCGPA } from '../utils/gpa';
@@ -42,25 +44,27 @@ export default function FloatingAIChat() {
   // Load chat sessions
   useEffect(() => {
     if (!user || !isOpen || !isVisible) return;
+    const q = query(
+      collection(db, 'chatSessions'),
+      where('userId', '==', user.uid)
+    );
     
-    const fetchSessions = async () => {
-      try {
-        const res = await fetch('/api/chat/sessions');
-        if (res.ok) {
-          const loadedSessions = await res.json();
-          setSessions(loadedSessions);
-          if (loadedSessions.length > 0 && !activeSessionId) {
-            setActiveSessionId(loadedSessions[0].id);
-          }
-        }
-      } catch (error) {
-        console.error('Error fetching sessions:', error);
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      const loadedSessions = snapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      })) as ChatSession[];
+      
+      loadedSessions.sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime());
+      setSessions(loadedSessions);
+      
+      if (loadedSessions.length > 0 && !activeSessionId) {
+        setActiveSessionId(loadedSessions[0].id);
       }
-    };
+    });
 
-    fetchSessions();
-    // In a real app, you might want to use polling or WebSockets for real-time updates
-  }, [user, isOpen, activeSessionId, isVisible]);
+    return () => unsubscribe();
+  }, [user, isOpen, activeSessionId]);
 
   // Load messages for active session
   useEffect(() => {
@@ -69,20 +73,24 @@ export default function FloatingAIChat() {
       return;
     }
 
-    const fetchMessages = async () => {
-      try {
-        const res = await fetch(`/api/chat/sessions/${activeSessionId}/messages`);
-        if (res.ok) {
-          const loadedMessages = await res.json();
-          setMessages(loadedMessages);
-        }
-      } catch (error) {
-        console.error('Error fetching messages:', error);
-      }
-    };
+    const q = query(
+      collection(db, 'chatMessages'),
+      where('chatId', '==', activeSessionId),
+      where('userId', '==', user.uid)
+    );
 
-    fetchMessages();
-  }, [activeSessionId, isOpen, isVisible]);
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      const loadedMessages = snapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      })) as ChatMessage[];
+      
+      loadedMessages.sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
+      setMessages(loadedMessages);
+    });
+
+    return () => unsubscribe();
+  }, [activeSessionId, isOpen]);
 
   useEffect(() => {
     if (messagesEndRef.current) {
@@ -93,18 +101,14 @@ export default function FloatingAIChat() {
   const createNewSession = async () => {
     if (!user) return;
     try {
-      const res = await fetch('/api/chat/sessions', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ title: 'New Chat' })
+      const docRef = await addDoc(collection(db, 'chatSessions'), {
+        userId: user.uid,
+        title: 'New Chat',
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString()
       });
-      if (res.ok) {
-        const newSession = await res.json();
-        setSessions(prev => [newSession, ...prev]);
-        setActiveSessionId(newSession.id);
-        setShowHistory(false);
-        setMessages([]);
-      }
+      setActiveSessionId(docRef.id);
+      setShowHistory(false);
     } catch (error) {
       console.error("Error creating session", error);
     }
@@ -113,16 +117,16 @@ export default function FloatingAIChat() {
   const deleteSession = async (e: React.MouseEvent, sessionId: string) => {
     e.stopPropagation();
     try {
-      const res = await fetch(`/api/chat/sessions/${sessionId}`, {
-        method: 'DELETE'
-      });
-      if (res.ok) {
+      await deleteDoc(doc(db, 'chatSessions', sessionId));
+      
+      const q = query(collection(db, 'chatMessages'), where('chatId', '==', sessionId));
+      const snapshot = await getDocs(q);
+      const deletePromises = snapshot.docs.map(messageDoc => deleteDoc(doc(db, 'chatMessages', messageDoc.id)));
+      await Promise.all(deletePromises);
+
+      if (activeSessionId === sessionId) {
         const remainingSessions = sessions.filter(s => s.id !== sessionId);
-        setSessions(remainingSessions);
-        if (activeSessionId === sessionId) {
-          setActiveSessionId(remainingSessions.length > 0 ? remainingSessions[0].id : null);
-          setMessages([]);
-        }
+        setActiveSessionId(remainingSessions.length > 0 ? remainingSessions[0].id : null);
       }
     } catch (error) {
       console.error("Error deleting session:", error);
@@ -140,37 +144,23 @@ export default function FloatingAIChat() {
     try {
       // Create session if none exists
       if (!currentSessionId) {
-        const res = await fetch('/api/chat/sessions', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ title: 'New Chat' })
+        const docRef = await addDoc(collection(db, 'chatSessions'), {
+          userId: user.uid,
+          title: 'New Chat',
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString()
         });
-        if (res.ok) {
-          const newSession = await res.json();
-          currentSessionId = newSession.id;
-          setSessions(prev => [newSession, ...prev]);
-          setActiveSessionId(currentSessionId);
-        } else {
-          throw new Error('Failed to create session');
-        }
+        currentSessionId = docRef.id;
+        setActiveSessionId(currentSessionId);
       }
 
-      // Optimistically add user message to UI
-      const tempUserMsg: ChatMessage = {
-        id: Date.now().toString(),
-        chatId: currentSessionId!,
+      // Save user message to DB
+      await addDoc(collection(db, 'chatMessages'), {
+        chatId: currentSessionId,
         userId: user.uid,
         role: 'user',
         content: userMessage,
         createdAt: new Date().toISOString()
-      };
-      setMessages(prev => [...prev, tempUserMsg]);
-
-      // Save user message to DB
-      await fetch(`/api/chat/sessions/${currentSessionId}/messages`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ role: 'user', content: userMessage })
       });
 
       // Prepare history for Gemini
@@ -220,55 +210,50 @@ export default function FloatingAIChat() {
         contents: historyContents,
         config: {
           systemInstruction: context,
-          maxOutputTokens: 2048,
+          maxOutputTokens: 2048, // Increased character count
         }
       });
       
       const aiResponse = response.text || 'I am not sure how to respond to that.';
 
       // Save AI message to DB
-      const aiMsgRes = await fetch(`/api/chat/sessions/${currentSessionId}/messages`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ role: 'assistant', content: aiResponse })
+      await addDoc(collection(db, 'chatMessages'), {
+        chatId: currentSessionId,
+        userId: user.uid,
+        role: 'assistant',
+        content: aiResponse,
+        createdAt: new Date().toISOString()
       });
-
-      if (aiMsgRes.ok) {
-        const newAiMsg = await aiMsgRes.json();
-        setMessages(prev => [...prev, newAiMsg]);
-      }
 
       // Update session title if it's still "New Chat"
       const session = sessions.find(s => s.id === currentSessionId);
       if (session && (session.title === 'New Chat' || messages.length === 0)) {
+        // Intelligently name the chat based on the first question
         const titleResponse = await ai.models.generateContent({
           model: 'gemini-3-flash-preview',
           contents: [{ role: 'user', parts: [{ text: `Generate a very short, 3-5 word title for a chat that starts with this question: "${userMessage}". Output ONLY the title.` }] }]
         });
         const newTitle = titleResponse.text?.trim().replace(/^"|"$/g, '') || userMessage.substring(0, 30);
-        
-        await fetch(`/api/chat/sessions/${currentSessionId}`, {
-          method: 'PUT',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ title: newTitle })
+        await updateDoc(doc(db, 'chatSessions', currentSessionId), {
+          title: newTitle,
+          updatedAt: new Date().toISOString()
         });
-        
-        setSessions(prev => prev.map(s => s.id === currentSessionId ? { ...s, title: newTitle } : s));
+      } else {
+        await updateDoc(doc(db, 'chatSessions', currentSessionId), {
+          updatedAt: new Date().toISOString()
+        });
       }
 
     } catch (error) {
       console.error('AI Error:', error);
       if (currentSessionId) {
-        const errorMsg = 'Sorry, I encountered an error. Please try again later.';
-        const errRes = await fetch(`/api/chat/sessions/${currentSessionId}/messages`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ role: 'assistant', content: errorMsg })
+        await addDoc(collection(db, 'chatMessages'), {
+          chatId: currentSessionId,
+          userId: user.uid,
+          role: 'assistant',
+          content: 'Sorry, I encountered an error. Please try again later.',
+          createdAt: new Date().toISOString()
         });
-        if (errRes.ok) {
-          const newErrMsg = await errRes.json();
-          setMessages(prev => [...prev, newErrMsg]);
-        }
       }
     } finally {
       setIsLoading(false);

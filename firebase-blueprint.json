@@ -1,0 +1,99 @@
+{
+  "entities": {
+    "User": {
+      "title": "User",
+      "description": "A student using GradePro",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string" },
+        "email": { "type": "string" },
+        "displayName": { "type": "string" },
+        "photoURL": { "type": "string" },
+        "targetCGPA": { "type": "number" },
+        "gradingScale": { "type": "number", "description": "e.g., 4.0, 5.0" },
+        "institution": { "type": "string" },
+        "faculty": { "type": "string" },
+        "department": { "type": "string" },
+        "level": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["uid", "email"]
+    },
+    "ChatSession": {
+      "title": "ChatSession",
+      "description": "A chat session with GradePro AI",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "title": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["userId", "title", "createdAt", "updatedAt"]
+    },
+    "ChatMessage": {
+      "title": "ChatMessage",
+      "description": "A message in a chat session",
+      "type": "object",
+      "properties": {
+        "chatId": { "type": "string" },
+        "userId": { "type": "string" },
+        "role": { "type": "string", "enum": ["user", "assistant"] },
+        "content": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["chatId", "userId", "role", "content", "createdAt"]
+    },
+    "Semester": {
+      "title": "Semester",
+      "description": "A semester record for a student",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "level": { "type": "string", "description": "e.g., 100L, 200L" },
+        "name": { "type": "string", "description": "e.g., First Semester" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["userId", "level", "name"]
+    },
+    "Course": {
+      "title": "Course",
+      "description": "A course taken in a semester",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "semesterId": { "type": "string" },
+        "code": { "type": "string", "description": "e.g., MTH101" },
+        "title": { "type": "string" },
+        "units": { "type": "number" },
+        "grade": { "type": "string", "description": "A, B, C, D, E, F" },
+        "score": { "type": "number" },
+        "gradePoint": { "type": "number" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["userId", "semesterId", "code", "units", "grade", "gradePoint"]
+    }
+  },
+  "firestore": {
+    "users/{userId}": {
+      "schema": { "$ref": "#/entities/User" },
+      "description": "User profiles"
+    },
+    "semesters/{semesterId}": {
+      "schema": { "$ref": "#/entities/Semester" },
+      "description": "Semesters"
+    },
+    "courses/{courseId}": {
+      "schema": { "$ref": "#/entities/Course" },
+      "description": "Courses"
+    },
+    "chatSessions/{sessionId}": {
+      "schema": { "$ref": "#/entities/ChatSession" },
+      "description": "Chat sessions"
+    },
+    "chatMessages/{messageId}": {
+      "schema": { "$ref": "#/entities/ChatMessage" },
+      "description": "Chat messages"
+    }
+  }
+}
