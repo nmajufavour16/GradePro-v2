@@ -1,11 +1,11 @@
 import React from 'react';
 import { Navigate } from 'react-router-dom';
-import { useAuth } from '../contexts/AuthContext';
-import { BookOpen, TrendingUp, BrainCircuit, FileText } from 'lucide-react';
+import { useAuth } from '@/src/contexts/AuthContext';
+import { BookOpen, TrendingUp, BrainCircuit, FileText, Loader2 } from 'lucide-react';
 import { GradeProLogo } from '../components/GradeProLogo';
 
 export default function Landing() {
-  const { user, login } = useAuth();
+  const { user, login, isLoggingIn } = useAuth();
 
   if (user) {
     return <Navigate to="/dashboard" replace />;
@@ -17,8 +17,10 @@ export default function Landing() {
         <GradeProLogo className="h-10" />
         <button
           onClick={login}
-          className="px-6 py-2 bg-indigo-600 text-white font-medium rounded-xl hover:bg-indigo-700 transition-colors"
+          disabled={isLoggingIn}
+          className="px-6 py-2 bg-indigo-600 text-white font-medium rounded-xl hover:bg-indigo-700 transition-colors disabled:opacity-50 flex items-center gap-2"
         >
+          {isLoggingIn && <Loader2 className="h-4 w-4 animate-spin" />}
           Sign In
         </button>
       </header>
@@ -35,8 +37,10 @@ export default function Landing() {
           <div className="pt-8 flex flex-col sm:flex-row items-center justify-center gap-4">
             <button
               onClick={login}
-              className="px-8 py-4 bg-indigo-600 text-white text-lg font-semibold rounded-2xl hover:bg-indigo-700 transition-all transform hover:scale-105 shadow-lg"
+              disabled={isLoggingIn}
+              className="px-8 py-4 bg-indigo-600 text-white text-lg font-semibold rounded-2xl hover:bg-indigo-700 transition-all transform hover:scale-105 shadow-lg disabled:opacity-50 flex items-center gap-2"
             >
+              {isLoggingIn && <Loader2 className="h-5 w-5 animate-spin" />}
               Get Started for Free
             </button>
           </div>

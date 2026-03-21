@@ -1,11 +1,13 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { useAuth } from '../contexts/AuthContext';
-import { useData } from '../contexts/DataContext';
-import { calculateCGPA } from '../utils/gpa';
+import { collection, query, where, orderBy, onSnapshot, addDoc, serverTimestamp, doc, getDocs, updateDoc, deleteDoc } from 'firebase/firestore';
+import { db } from '@/src/firebase';
+import { useAuth } from '@/src/contexts/AuthContext';
+import { useData } from '@/src/contexts/DataContext';
+import { calculateCGPA } from '@/src/utils/gpa';
 import { GoogleGenAI } from '@google/genai';
 import ReactMarkdown from 'react-markdown';
 import { MessageCircle, Send, Loader2, Sparkles, Plus, Trash2, History, X, Menu, ChevronLeft, ChevronRight, Mic, Square } from 'lucide-react';
-import { ChatSession, ChatMessage } from '../types';
+import { ChatSession, ChatMessage } from '@/src/types';
 import { motion, AnimatePresence } from 'motion/react';
 import { useAudioRecorder } from '../hooks/useAudioRecorder';
 
@@ -29,24 +31,29 @@ export default function AIChat() {
   // Load chat sessions
   useEffect(() => {
     if (!user) return;
+    const q = query(
+      collection(db, 'chatSessions'),
+      where('userId', '==', user.uid)
+    );
     
-    const fetchSessions = async () => {
-      try {
-        const res = await fetch('/api/chat/sessions');
-        if (res.ok) {
-          const data = await res.json();
-          setSessions(data);
-          if (data.length > 0 && !activeSessionId) {
-            setActiveSessionId(data[0].id);
-          }
-        }
-      } catch (error) {
-        console.error('Error fetching sessions:', error);
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      const loadedSessions = snapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      })) as ChatSession[];
+      
+      // Sort in memory to avoid requiring a composite index
+      loadedSessions.sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime());
+      
+      setSessions(loadedSessions);
+      
+      if (loadedSessions.length > 0 && !activeSessionId) {
+        setActiveSessionId(loadedSessions[0].id);
       }
-    };
+    });
 
-    fetchSessions();
-  }, [user]);
+    return () => unsubscribe();
+  }, [user, activeSessionId]);
 
   // Load messages for active session
   useEffect(() => {
@@ -55,19 +62,25 @@ export default function AIChat() {
       return;
     }
 
-    const fetchMessages = async () => {
-      try {
-        const res = await fetch(`/api/chat/sessions/${activeSessionId}/messages`);
-        if (res.ok) {
-          const data = await res.json();
-          setMessages(data);
-        }
-      } catch (error) {
-        console.error('Error fetching messages:', error);
-      }
-    };
+    const q = query(
+      collection(db, 'chatMessages'),
+      where('chatId', '==', activeSessionId),
+      where('userId', '==', user.uid)
+    );
 
-    fetchMessages();
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      const loadedMessages = snapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      })) as ChatMessage[];
+      
+      // Sort in memory to avoid requiring a composite index
+      loadedMessages.sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
+      
+      setMessages(loadedMessages);
+    });
+
+    return () => unsubscribe();
   }, [activeSessionId]);
 
   useEffect(() => {
@@ -79,16 +92,13 @@ export default function AIChat() {
   const createNewSession = async () => {
     if (!user) return;
     try {
-      const res = await fetch('/api/chat/sessions', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ title: 'New Chat' })
+      const docRef = await addDoc(collection(db, 'chatSessions'), {
+        userId: user.uid,
+        title: 'New Chat',
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString()
       });
-      if (res.ok) {
-        const newSession = await res.json();
-        setSessions(prev => [newSession, ...prev]);
-        setActiveSessionId(newSession.id);
-      }
+      setActiveSessionId(docRef.id);
     } catch (error) {
       console.error("Error creating session", error);
     }
@@ -97,15 +107,16 @@ export default function AIChat() {
   const deleteSession = async (e: React.MouseEvent, sessionId: string) => {
     e.stopPropagation();
     try {
-      const res = await fetch(`/api/chat/sessions/${sessionId}`, {
-        method: 'DELETE'
-      });
-      if (res.ok) {
+      await deleteDoc(doc(db, 'chatSessions', sessionId));
+      
+      const q = query(collection(db, 'chatMessages'), where('chatId', '==', sessionId));
+      const snapshot = await getDocs(q);
+      const deletePromises = snapshot.docs.map(messageDoc => deleteDoc(doc(db, 'chatMessages', messageDoc.id)));
+      await Promise.all(deletePromises);
+
+      if (activeSessionId === sessionId) {
         const remainingSessions = sessions.filter(s => s.id !== sessionId);
-        setSessions(remainingSessions);
-        if (activeSessionId === sessionId) {
-          setActiveSessionId(remainingSessions.length > 0 ? remainingSessions[0].id : null);
-        }
+        setActiveSessionId(remainingSessions.length > 0 ? remainingSessions[0].id : null);
       }
     } catch (error) {
       console.error("Error deleting session:", error);
@@ -123,32 +134,24 @@ export default function AIChat() {
     try {
       // Create session if none exists
       if (!currentSessionId) {
-        const res = await fetch('/api/chat/sessions', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ title: userMessage.substring(0, 30) + (userMessage.length > 30 ? '...' : '') })
+        const docRef = await addDoc(collection(db, 'chatSessions'), {
+          userId: user.uid,
+          title: userMessage.substring(0, 30) + (userMessage.length > 30 ? '...' : ''),
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString()
         });
-        if (res.ok) {
-          const newSession = await res.json();
-          setSessions(prev => [newSession, ...prev]);
-          currentSessionId = newSession.id;
-          setActiveSessionId(currentSessionId);
-        } else {
-          throw new Error('Failed to create session');
-        }
+        currentSessionId = docRef.id;
+        setActiveSessionId(currentSessionId);
       }
 
       // Save user message to DB
-      const userMsgRes = await fetch(`/api/chat/sessions/${currentSessionId}/messages`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ role: 'user', content: userMessage })
+      await addDoc(collection(db, 'chatMessages'), {
+        chatId: currentSessionId,
+        userId: user.uid,
+        role: 'user',
+        content: userMessage,
+        createdAt: new Date().toISOString()
       });
-      
-      if (userMsgRes.ok) {
-        const savedUserMsg = await userMsgRes.json();
-        setMessages(prev => [...prev, savedUserMsg]);
-      }
 
       // Prepare history for Gemini
       const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
@@ -204,16 +207,13 @@ export default function AIChat() {
       const aiResponse = response.text || 'I am not sure how to respond to that.';
 
       // Save AI message to DB
-      const aiMsgRes = await fetch(`/api/chat/sessions/${currentSessionId}/messages`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ role: 'assistant', content: aiResponse })
+      await addDoc(collection(db, 'chatMessages'), {
+        chatId: currentSessionId,
+        userId: user.uid,
+        role: 'assistant',
+        content: aiResponse,
+        createdAt: new Date().toISOString()
       });
-      
-      if (aiMsgRes.ok) {
-        const savedAiMsg = await aiMsgRes.json();
-        setMessages(prev => [...prev, savedAiMsg]);
-      }
 
       // Update session title if it's still "New Chat"
       const session = sessions.find(s => s.id === currentSessionId);
@@ -223,28 +223,26 @@ export default function AIChat() {
           contents: [{ role: 'user', parts: [{ text: `Generate a very short, 3-5 word title for a chat that starts with this question: "${userMessage}". Output ONLY the title.` }] }]
         });
         const newTitle = titleResponse.text?.trim().replace(/^"|"$/g, '') || userMessage.substring(0, 30);
-        
-        await fetch(`/api/chat/sessions/${currentSessionId}`, {
-          method: 'PUT',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ title: newTitle })
+        await updateDoc(doc(db, 'chatSessions', currentSessionId), {
+          title: newTitle,
+          updatedAt: new Date().toISOString()
         });
-        
-        setSessions(prev => prev.map(s => s.id === currentSessionId ? { ...s, title: newTitle } : s));
+      } else {
+        await updateDoc(doc(db, 'chatSessions', currentSessionId), {
+          updatedAt: new Date().toISOString()
+        });
       }
 
     } catch (error) {
       console.error('AI Error:', error);
       if (currentSessionId) {
-        const errorMsgRes = await fetch(`/api/chat/sessions/${currentSessionId}/messages`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ role: 'assistant', content: 'Sorry, I encountered an error. Please try again later.' })
+        await addDoc(collection(db, 'chatMessages'), {
+          chatId: currentSessionId,
+          userId: user.uid,
+          role: 'assistant',
+          content: 'Sorry, I encountered an error. Please try again later.',
+          createdAt: new Date().toISOString()
         });
-        if (errorMsgRes.ok) {
-          const savedErrorMsg = await errorMsgRes.json();
-          setMessages(prev => [...prev, savedErrorMsg]);
-        }
       }
     } finally {
       setIsLoading(false);

@@ -1,7 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useAuth } from '../contexts/AuthContext';
-import { AppMetadata } from '../types';
+import { useAuth } from '@/src/contexts/AuthContext';
+import { doc, getDoc } from 'firebase/firestore';
+import { db } from '@/src/firebase';
+import { AppMetadata } from '@/src/types';
 import { BookOpen, Loader2 } from 'lucide-react';
 
 export default function Onboarding() {
@@ -18,13 +20,10 @@ export default function Onboarding() {
 
   useEffect(() => {
     const fetchMetadata = async () => {
-      try {
-        const res = await fetch('/api/metadata');
-        if (res.ok) {
-          setMetadata(await res.json());
-        }
-      } catch (error) {
-        console.error('Error fetching metadata:', error);
+      const docRef = doc(db, 'metadata', 'app-config');
+      const docSnap = await getDoc(docRef);
+      if (docSnap.exists()) {
+        setMetadata({ id: docSnap.id, ...docSnap.data() } as AppMetadata);
       }
     };
     fetchMetadata();
