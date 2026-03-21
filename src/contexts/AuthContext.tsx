@@ -33,7 +33,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             // Force admin role for the specific email if not already set
             if (currentUser.email === 'nmajufavour16@gmail.com' && data.role !== 'admin') {
               data.role = 'admin';
-              await setDoc(docRef, { role: 'admin' }, { merge: true });
+              await setDoc(docRef, { 
+                role: 'admin',
+                uid: currentUser.uid,
+                email: currentUser.email || ''
+              }, { merge: true });
             }
             setProfile(data);
           } else {
