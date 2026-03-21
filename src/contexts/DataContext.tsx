@@ -1,6 +1,9 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
-import { Semester, Course } from '../types';
+import { collection, query, where, onSnapshot, addDoc, updateDoc, deleteDoc, doc } from 'firebase/firestore';
+import { db } from '../firebase';
+import { Semester, Course, OperationType } from '../types';
 import { useAuth } from './AuthContext';
+import { handleFirestoreError } from '../utils/firebaseErrors';
 
 interface DataContextType {
   semesters: Semester[];
@@ -22,7 +25,7 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
   const [courses, setCourses] = useState<Course[]>([]);
   const [loading, setLoading] = useState(true);
 
-  const fetchData = async () => {
+  useEffect(() => {
     if (!user) {
       setSemesters([]);
       setCourses([]);
@@ -31,117 +34,96 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
     }
 
     setLoading(true);
-    try {
-      const [semRes, courRes] = await Promise.all([
-        fetch('/api/semesters'),
-        fetch('/api/courses')
-      ]);
 
-      if (semRes.ok && courRes.ok) {
-        const semData = await semRes.json();
-        const courData = await courRes.json();
-        setSemesters(semData);
-        setCourses(courData);
-      }
-    } catch (error) {
-      console.error('Error fetching data:', error);
-    } finally {
+    const qSemesters = query(collection(db, 'semesters'), where('userId', '==', user.uid));
+    const unsubSemesters = onSnapshot(qSemesters, (snapshot) => {
+      const data = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Semester));
+      // Sort by creation date or level
+      data.sort((a, b) => (a.createdAt || '').localeCompare(b.createdAt || ''));
+      setSemesters(data);
+    }, (error) => {
+      handleFirestoreError(error, OperationType.LIST, 'semesters');
+    });
+
+    const qCourses = query(collection(db, 'courses'), where('userId', '==', user.uid));
+    const unsubCourses = onSnapshot(qCourses, (snapshot) => {
+      const data = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Course));
+      setCourses(data);
       setLoading(false);
-    }
-  };
+    }, (error) => {
+      handleFirestoreError(error, OperationType.LIST, 'courses');
+    });
 
-  useEffect(() => {
-    fetchData();
+    return () => {
+      unsubSemesters();
+      unsubCourses();
+    };
   }, [user]);
 
   const addSemester = async (data: Omit<Semester, 'id' | 'userId' | 'createdAt'>) => {
     if (!user) return;
     try {
-      const res = await fetch('/api/semesters', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(data)
+      await addDoc(collection(db, 'semesters'), {
+        ...data,
+        userId: user.uid,
+        createdAt: new Date().toISOString()
       });
-      if (res.ok) {
-        const newSem = await res.json();
-        setSemesters(prev => [...prev, newSem]);
-      }
     } catch (error) {
-      console.error('Error adding semester:', error);
+      handleFirestoreError(error, OperationType.CREATE, 'semesters');
     }
   };
 
   const updateSemester = async (id: string, data: Partial<Semester>) => {
     if (!user) return;
     try {
-      const res = await fetch(`/api/semesters/${id}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(data)
-      });
-      if (res.ok) {
-        setSemesters(prev => prev.map(s => s.id === id ? { ...s, ...data } : s));
-      }
+      await updateDoc(doc(db, 'semesters', id), data);
     } catch (error) {
-      console.error('Error updating semester:', error);
+      handleFirestoreError(error, OperationType.UPDATE, `semesters/${id}`);
     }
   };
 
   const deleteSemester = async (id: string) => {
     if (!user) return;
     try {
-      const res = await fetch(`/api/semesters/${id}`, { method: 'DELETE' });
-      if (res.ok) {
-        setSemesters(prev => prev.filter(s => s.id !== id));
-        setCourses(prev => prev.filter(c => c.semesterId !== id));
+      await deleteDoc(doc(db, 'semesters', id));
+      // Also delete associated courses
+      const semesterCourses = courses.filter(c => c.semesterId === id);
+      for (const course of semesterCourses) {
+        await deleteDoc(doc(db, 'courses', course.id));
       }
     } catch (error) {
-      console.error('Error deleting semester:', error);
+      handleFirestoreError(error, OperationType.DELETE, `semesters/${id}`);
     }
   };
 
   const addCourse = async (data: Omit<Course, 'id' | 'userId' | 'createdAt'>) => {
     if (!user) return;
     try {
-      const res = await fetch('/api/courses', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(data)
+      await addDoc(collection(db, 'courses'), {
+        ...data,
+        userId: user.uid,
+        createdAt: new Date().toISOString()
       });
-      if (res.ok) {
-        const newCourse = await res.json();
-        setCourses(prev => [...prev, newCourse]);
-      }
     } catch (error) {
-      console.error('Error adding course:', error);
+      handleFirestoreError(error, OperationType.CREATE, 'courses');
     }
   };
 
   const updateCourse = async (id: string, data: Partial<Course>) => {
     if (!user) return;
     try {
-      const res = await fetch(`/api/courses/${id}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(data)
-      });
-      if (res.ok) {
-        setCourses(prev => prev.map(c => c.id === id ? { ...c, ...data } : c));
-      }
+      await updateDoc(doc(db, 'courses', id), data);
     } catch (error) {
-      console.error('Error updating course:', error);
+      handleFirestoreError(error, OperationType.UPDATE, `courses/${id}`);
     }
   };
 
   const deleteCourse = async (id: string) => {
     if (!user) return;
     try {
-      const res = await fetch(`/api/courses/${id}`, { method: 'DELETE' });
-      if (res.ok) {
-        setCourses(prev => prev.filter(c => c.id !== id));
-      }
+      await deleteDoc(doc(db, 'courses', id));
     } catch (error) {
-      console.error('Error deleting course:', error);
+      handleFirestoreError(error, OperationType.DELETE, `courses/${id}`);
     }
   };
 

@@ -112,8 +112,8 @@ export default function Dashboard() {
       {semesters.length > 0 && (
         <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
           <h3 className="text-lg font-bold text-slate-900 mb-6">GPA Trend</h3>
-          <div className="h-72 w-full relative">
-            <ResponsiveContainer width="100%" height="100%" minWidth={0}>
+          <div className="h-72 w-full">
+            <ResponsiveContainer width="100%" height="100%">
               <LineChart data={chartData}>
                 <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" />
                 <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fill: '#64748b' }} dy={10} />

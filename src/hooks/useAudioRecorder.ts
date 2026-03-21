@@ -51,21 +51,22 @@ export function useAudioRecorder(onTranscriptionComplete: (text: string) => void
     setIsTranscribing(true);
     try {
       const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
-      const cleanMimeType = mimeType.split(';')[0] || 'audio/webm';
-      
       const response = await ai.models.generateContent({
         model: 'gemini-3-flash-preview',
-        contents: {
-          parts: [
-            {
-              inlineData: {
-                data: base64Audio,
-                mimeType: cleanMimeType
-              }
-            },
-            { text: 'Transcribe this audio accurately. Output ONLY the transcription text, nothing else.' }
-          ]
-        }
+        contents: [
+          {
+            role: 'user',
+            parts: [
+              {
+                inlineData: {
+                  data: base64Audio,
+                  mimeType: mimeType
+                }
+              },
+              { text: 'Transcribe this audio accurately. Output ONLY the transcription text, nothing else.' }
+            ]
+          }
+        ]
       });
       
       const transcription = response.text?.trim();
@@ -74,7 +75,7 @@ export function useAudioRecorder(onTranscriptionComplete: (text: string) => void
       }
     } catch (error) {
       console.error("Transcription error:", error);
-      alert("Failed to transcribe audio. Please try again.");
+      alert("Failed to transcribe audio.");
     } finally {
       setIsTranscribing(false);
     }
