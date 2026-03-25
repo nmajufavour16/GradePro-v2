@@ -1,16 +1,16 @@
 import React from 'react';
 import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom';
-import { AuthProvider, useAuth } from './contexts/AuthContext';
-import { DataProvider } from './contexts/DataContext';
-import Layout from './components/Layout';
-import Landing from './pages/Landing';
-import Dashboard from './pages/Dashboard';
-import Semesters from './pages/Semesters';
-import SemesterDetail from './pages/SemesterDetail';
-import Report from './pages/Report';
-import Onboarding from './pages/Onboarding';
-import AIChat from './pages/AIChat';
-import AdminDashboard from './pages/AdminDashboard';
+import { AuthProvider, useAuth } from '@/src/contexts/AuthContext';
+import { DataProvider } from '@/src/contexts/DataContext';
+import Layout from '@/src/components/Layout';
+import Landing from '@/src/pages/Landing';
+import Dashboard from '@/src/pages/Dashboard';
+import Semesters from '@/src/pages/Semesters';
+import SemesterDetail from '@/src/pages/SemesterDetail';
+import Report from '@/src/pages/Report';
+import Onboarding from '@/src/pages/Onboarding';
+import AIChat from '@/src/pages/AIChat';
+import AdminDashboard from '@/src/pages/AdminDashboard';
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const { user, profile, loading } = useAuth();

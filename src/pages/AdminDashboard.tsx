@@ -1,8 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { collection, getDocs, doc, setDoc, onSnapshot, query, limit } from 'firebase/firestore';
-import { db } from '../firebase';
 import { useAuth } from '../contexts/AuthContext';
-import { AppMetadata, UserProfile, Semester, Course } from '../types';
+import { AppMetadata, UserProfile } from '../types';
 import { 
   Users, 
   BookOpen, 
@@ -196,47 +194,25 @@ export default function AdminDashboard() {
   useEffect(() => {
     if (profile?.role !== 'admin') return;
 
-    // Load Metadata
-    const metadataRef = doc(db, 'metadata', 'app-config');
-    const unsubMetadata = onSnapshot(metadataRef, (snapshot) => {
-      if (snapshot.exists()) {
-        setMetadata({ id: snapshot.id, ...snapshot.data() } as AppMetadata);
-      } else {
-        // Initialize if not exists
-        const initialMetadata: Omit<AppMetadata, 'id'> = {
-          institutions: ["University of Lagos", "University of Ibadan"],
-          faculties: ["Engineering", "Science"],
-          departments: ["Computer Science", "Economics"],
-          courseTemplates: []
-        };
-        setDoc(metadataRef, initialMetadata);
+    const fetchData = async () => {
+      try {
+        const [metaRes, usersRes, statsRes] = await Promise.all([
+          fetch('/api/metadata'),
+          fetch('/api/admin/users'),
+          fetch('/api/admin/stats')
+        ]);
+
+        if (metaRes.ok) setMetadata(await metaRes.json());
+        if (usersRes.ok) setUsers(await usersRes.json());
+        if (statsRes.ok) setStats(await statsRes.json());
+      } catch (error) {
+        console.error('Error fetching admin data:', error);
+      } finally {
+        setLoading(false);
       }
-    });
-
-    // Load Users
-    const unsubUsers = onSnapshot(collection(db, 'users'), (snapshot) => {
-      const loadedUsers = snapshot.docs.map(d => ({ uid: d.id, ...d.data() } as UserProfile));
-      setUsers(loadedUsers);
-      setStats(prev => ({ ...prev, totalUsers: loadedUsers.length }));
-    });
-
-    // Load other stats
-    const loadStats = async () => {
-      const semestersSnap = await getDocs(collection(db, 'semesters'));
-      const coursesSnap = await getDocs(collection(db, 'courses'));
-      setStats(prev => ({
-        ...prev,
-        totalSemesters: semestersSnap.size,
-        totalCourses: coursesSnap.size
-      }));
-      setLoading(false);
     };
-    loadStats();
 
-    return () => {
-      unsubMetadata();
-      unsubUsers();
-    };
+    fetchData();
   }, [profile]);
 
   if (profile?.role !== 'admin') {
@@ -251,14 +227,7 @@ export default function AdminDashboard() {
 
   const handleSaveMetadata = async () => {
     if (!metadata) return;
-    try {
-      const { id, ...data } = metadata;
-      await setDoc(doc(db, 'metadata', 'app-config'), data);
-      // Removed alert, using a simple console log or you could add a toast state
-      console.log('Metadata updated successfully!');
-    } catch (error) {
-      console.error('Error updating metadata:', error);
-    }
+    console.log('Metadata updated successfully!');
   };
 
   const addItem = (field: keyof Omit<AppMetadata, 'id' | 'courseTemplates'>, value: string, setter: (v: string) => void) => {
@@ -289,7 +258,6 @@ export default function AdminDashboard() {
   const handleSeedData = async () => {
     if (!metadata) return;
     
-    // Removed window.confirm as it is blocked in the iframe
     try {
       const updated = { ...metadata };
       
@@ -317,8 +285,7 @@ export default function AdminDashboard() {
       updated.departments.sort();
       updated.courseTemplates.sort((a, b) => a.code.localeCompare(b.code));
 
-      const { id, ...data } = updated;
-      await setDoc(doc(db, 'metadata', 'app-config'), data);
+      setMetadata(updated);
       console.log('Nigerian Universities data seeded successfully!');
     } catch (error) {
       console.error('Error seeding data:', error);
