@@ -5,6 +5,8 @@ import { useAuth } from '../contexts/AuthContext';
 import { AppMetadata } from '../types';
 import { calculateGPA, getGradePoint } from '../utils/gpa';
 import { ArrowLeft, Plus, Trash2, Edit2, Check, X } from 'lucide-react';
+import { doc, getDoc } from 'firebase/firestore';
+import { db } from '../firebase';
 
 export default function SemesterDetail() {
   const { id } = useParams<{ id: string }>();
@@ -32,9 +34,10 @@ export default function SemesterDetail() {
   useEffect(() => {
     const fetchMetadata = async () => {
       try {
-        const res = await fetch('/api/metadata');
-        if (res.ok) {
-          setMetadata(await res.json());
+        const metaDocRef = doc(db, 'metadata', 'global');
+        const metaDocSnap = await getDoc(metaDocRef);
+        if (metaDocSnap.exists()) {
+          setMetadata({ id: metaDocSnap.id, ...metaDocSnap.data() } as AppMetadata);
         }
       } catch (error) {
         console.error('Error fetching metadata:', error);

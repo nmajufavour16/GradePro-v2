@@ -1,0 +1,122 @@
+{
+  "entities": {
+    "User": {
+      "title": "User",
+      "description": "User profile information",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string" },
+        "email": { "type": "string" },
+        "displayName": { "type": "string" },
+        "photoURL": { "type": "string" },
+        "targetCGPA": { "type": "number" },
+        "gradingScale": { "type": "number" },
+        "role": { "type": "string", "enum": ["admin", "user"] },
+        "createdAt": { "type": "string" }
+      },
+      "required": ["uid", "email", "role"]
+    },
+    "Semester": {
+      "title": "Semester",
+      "description": "A semester of study",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "name": { "type": "string" },
+        "level": { "type": "string" },
+        "institution": { "type": "string" },
+        "faculty": { "type": "string" },
+        "department": { "type": "string" },
+        "createdAt": { "type": "string" }
+      },
+      "required": ["userId", "name", "level"]
+    },
+    "Course": {
+      "title": "Course",
+      "description": "A course taken in a semester",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "semesterId": { "type": "string" },
+        "code": { "type": "string" },
+        "title": { "type": "string" },
+        "units": { "type": "number" },
+        "grade": { "type": "string" },
+        "createdAt": { "type": "string" }
+      },
+      "required": ["userId", "semesterId", "code", "units"]
+    },
+    "ChatSession": {
+      "title": "ChatSession",
+      "description": "A chat session with the AI",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "title": { "type": "string" },
+        "createdAt": { "type": "string" },
+        "updatedAt": { "type": "string" }
+      },
+      "required": ["userId", "title", "createdAt", "updatedAt"]
+    },
+    "ChatMessage": {
+      "title": "ChatMessage",
+      "description": "A message in a chat session",
+      "type": "object",
+      "properties": {
+        "chatId": { "type": "string" },
+        "userId": { "type": "string" },
+        "role": { "type": "string", "enum": ["user", "assistant"] },
+        "content": { "type": "string" },
+        "createdAt": { "type": "string" }
+      },
+      "required": ["chatId", "userId", "role", "content", "createdAt"]
+    },
+    "AppMetadata": {
+      "title": "AppMetadata",
+      "description": "Global application metadata",
+      "type": "object",
+      "properties": {
+        "institutions": { "type": "array", "items": { "type": "string" } },
+        "faculties": { "type": "array", "items": { "type": "string" } },
+        "departments": { "type": "array", "items": { "type": "string" } },
+        "courseTemplates": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "code": { "type": "string" },
+              "title": { "type": "string" },
+              "units": { "type": "number" }
+            }
+          }
+        }
+      }
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": { "$ref": "User" },
+      "description": "User profiles"
+    },
+    "/semesters/{semesterId}": {
+      "schema": { "$ref": "Semester" },
+      "description": "Semesters"
+    },
+    "/courses/{courseId}": {
+      "schema": { "$ref": "Course" },
+      "description": "Courses"
+    },
+    "/chat_sessions/{sessionId}": {
+      "schema": { "$ref": "ChatSession" },
+      "description": "Chat sessions"
+    },
+    "/chat_messages/{messageId}": {
+      "schema": { "$ref": "ChatMessage" },
+      "description": "Chat messages"
+    },
+    "/metadata/{docId}": {
+      "schema": { "$ref": "AppMetadata" },
+      "description": "Global metadata"
+    }
+  }
+}

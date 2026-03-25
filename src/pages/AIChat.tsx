@@ -27,7 +27,7 @@ export default function AIChat() {
   useEffect(() => {
     if (!user) return;
     const q = query(
-      collection(db, 'chatSessions'),
+      collection(db, 'chat_sessions'),
       where('userId', '==', user.uid)
     );
     
@@ -58,7 +58,7 @@ export default function AIChat() {
     }
 
     const q = query(
-      collection(db, 'chatMessages'),
+      collection(db, 'chat_messages'),
       where('chatId', '==', activeSessionId),
       where('userId', '==', user.uid)
     );
@@ -87,7 +87,7 @@ export default function AIChat() {
   const createNewSession = async () => {
     if (!user) return;
     try {
-      const docRef = await addDoc(collection(db, 'chatSessions'), {
+      const docRef = await addDoc(collection(db, 'chat_sessions'), {
         userId: user.uid,
         title: 'New Chat',
         createdAt: new Date().toISOString(),
@@ -102,11 +102,15 @@ export default function AIChat() {
   const deleteSession = async (e: React.MouseEvent, sessionId: string) => {
     e.stopPropagation();
     try {
-      await deleteDoc(doc(db, 'chatSessions', sessionId));
+      await deleteDoc(doc(db, 'chat_sessions', sessionId));
       
-      const q = query(collection(db, 'chatMessages'), where('chatId', '==', sessionId));
+      const q = query(
+        collection(db, 'chat_messages'), 
+        where('chatId', '==', sessionId),
+        where('userId', '==', user.uid)
+      );
       const snapshot = await getDocs(q);
-      const deletePromises = snapshot.docs.map(messageDoc => deleteDoc(doc(db, 'chatMessages', messageDoc.id)));
+      const deletePromises = snapshot.docs.map(messageDoc => deleteDoc(doc(db, 'chat_messages', messageDoc.id)));
       await Promise.all(deletePromises);
 
       if (activeSessionId === sessionId) {
@@ -129,7 +133,7 @@ export default function AIChat() {
     try {
       // Create session if none exists
       if (!currentSessionId) {
-        const docRef = await addDoc(collection(db, 'chatSessions'), {
+        const docRef = await addDoc(collection(db, 'chat_sessions'), {
           userId: user.uid,
           title: userMessage.substring(0, 30) + (userMessage.length > 30 ? '...' : ''),
           createdAt: new Date().toISOString(),
@@ -140,7 +144,7 @@ export default function AIChat() {
       }
 
       // Save user message to DB
-      await addDoc(collection(db, 'chatMessages'), {
+      await addDoc(collection(db, 'chat_messages'), {
         chatId: currentSessionId,
         userId: user.uid,
         role: 'user',
@@ -202,7 +206,7 @@ export default function AIChat() {
       const aiResponse = response.text || 'I am not sure how to respond to that.';
 
       // Save AI message to DB
-      await addDoc(collection(db, 'chatMessages'), {
+      await addDoc(collection(db, 'chat_messages'), {
         chatId: currentSessionId,
         userId: user.uid,
         role: 'assistant',
@@ -218,12 +222,12 @@ export default function AIChat() {
           contents: [{ role: 'user', parts: [{ text: `Generate a very short, 3-5 word title for a chat that starts with this question: "${userMessage}". Output ONLY the title.` }] }]
         });
         const newTitle = titleResponse.text?.trim().replace(/^"|"$/g, '') || userMessage.substring(0, 30);
-        await updateDoc(doc(db, 'chatSessions', currentSessionId), {
+        await updateDoc(doc(db, 'chat_sessions', currentSessionId), {
           title: newTitle,
           updatedAt: new Date().toISOString()
         });
       } else {
-        await updateDoc(doc(db, 'chatSessions', currentSessionId), {
+        await updateDoc(doc(db, 'chat_sessions', currentSessionId), {
           updatedAt: new Date().toISOString()
         });
       }
@@ -231,7 +235,7 @@ export default function AIChat() {
     } catch (error) {
       console.error('AI Error:', error);
       if (currentSessionId) {
-        await addDoc(collection(db, 'chatMessages'), {
+        await addDoc(collection(db, 'chat_messages'), {
           chatId: currentSessionId,
           userId: user.uid,
           role: 'assistant',

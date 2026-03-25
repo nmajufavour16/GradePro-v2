@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
-import { signInWithCredential, GoogleAuthProvider, signOut as firebaseSignOut, onAuthStateChanged } from 'firebase/auth';
+import { signInWithPopup, GoogleAuthProvider, signOut as firebaseSignOut, onAuthStateChanged } from 'firebase/auth';
 import { doc, getDoc, setDoc } from 'firebase/firestore';
 import { auth, db } from '@/src/firebase';
 import { User, UserProfile, OperationType } from '@/src/types';
@@ -24,47 +24,25 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [isLoggingIn, setIsLoggingIn] = useState(false);
 
   useEffect(() => {
-    fetchUser();
-
-    const handleMessage = (event: MessageEvent) => {
-      if (event.data?.type === 'OAUTH_AUTH_SUCCESS') {
-        fetchUser();
-      }
-    };
-
-    window.addEventListener('message', handleMessage);
-    return () => window.removeEventListener('message', handleMessage);
-  }, []);
-
-  const fetchUser = async () => {
-    try {
-      const response = await fetch('/api/auth/me');
-      if (response.ok) {
-        const data = await response.json();
-        const userData = data.user;
+    const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
+      if (firebaseUser) {
+        const userData: User = {
+          uid: firebaseUser.uid,
+          email: firebaseUser.email || '',
+          name: firebaseUser.displayName || '',
+          picture: firebaseUser.photoURL || '',
+        };
         setUser(userData);
-        
-        if (data.firebaseToken) {
-          try {
-            // Sign in to Firebase using the Google ID token
-            const credential = GoogleAuthProvider.credential(data.firebaseToken);
-            await signInWithCredential(auth, credential);
-          } catch (firebaseError) {
-            console.error('Firebase auth error:', firebaseError);
-          }
-        }
-        
         await fetchProfile(userData);
       } else {
         setUser(null);
         setProfile(null);
       }
-    } catch (error) {
-      console.error('Error fetching user:', error);
-    } finally {
       setLoading(false);
-    }
-  };
+    });
+
+    return () => unsubscribe();
+  }, []);
 
   const fetchProfile = async (currentUser: User) => {
     try {
@@ -105,36 +83,20 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     if (isLoggingIn) return;
     setIsLoggingIn(true);
     try {
-      const response = await fetch('/api/auth/url');
-      if (!response.ok) {
-        throw new Error('Failed to get auth URL');
-      }
-      const { url } = await response.json();
-      
-      const width = 500;
-      const height = 600;
-      const left = window.screenX + (window.outerWidth - width) / 2;
-      const top = window.screenY + (window.outerHeight - height) / 2;
-      
-      const authWindow = window.open(
-        url,
-        'Google Login',
-        `width=${width},height=${height},left=${left},top=${top}`
-      );
-
-      if (!authWindow) {
-        alert('Please allow popups for this site to sign in.');
-        setIsLoggingIn(false);
-      }
-    } catch (error) {
+      const provider = new GoogleAuthProvider();
+      provider.setCustomParameters({
+        prompt: 'select_account'
+      });
+      await signInWithPopup(auth, provider);
+    } catch (error: any) {
       console.error('Login error:', error);
+    } finally {
       setIsLoggingIn(false);
     }
   };
 
   const logout = async () => {
     try {
-      await fetch('/api/auth/logout', { method: 'POST' });
       await firebaseSignOut(auth);
       setUser(null);
       setProfile(null);

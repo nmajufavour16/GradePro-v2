@@ -20,7 +20,7 @@ export default function Onboarding() {
 
   useEffect(() => {
     const fetchMetadata = async () => {
-      const docRef = doc(db, 'metadata', 'app-config');
+      const docRef = doc(db, 'metadata', 'global');
       const docSnap = await getDoc(docRef);
       if (docSnap.exists()) {
         setMetadata({ id: docSnap.id, ...docSnap.data() } as AppMetadata);

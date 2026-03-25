@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { AppMetadata, UserProfile } from '../types';
+import { collection, doc, getDoc, getDocs, setDoc } from 'firebase/firestore';
+import { db } from '../firebase';
 import { 
   Users, 
   BookOpen, 
@@ -196,15 +198,40 @@ export default function AdminDashboard() {
 
     const fetchData = async () => {
       try {
-        const [metaRes, usersRes, statsRes] = await Promise.all([
-          fetch('/api/metadata'),
-          fetch('/api/admin/users'),
-          fetch('/api/admin/stats')
-        ]);
+        // Fetch metadata
+        const metaDocRef = doc(db, 'metadata', 'global');
+        const metaDocSnap = await getDoc(metaDocRef);
+        if (metaDocSnap.exists()) {
+          setMetadata({ id: metaDocSnap.id, ...metaDocSnap.data() } as AppMetadata);
+        } else {
+          // Initialize empty metadata if it doesn't exist
+          setMetadata({
+            id: 'global',
+            institutions: [],
+            faculties: [],
+            departments: [],
+            courseTemplates: []
+          });
+        }
 
-        if (metaRes.ok) setMetadata(await metaRes.json());
-        if (usersRes.ok) setUsers(await usersRes.json());
-        if (statsRes.ok) setStats(await statsRes.json());
+        // Fetch users
+        const usersCol = collection(db, 'users');
+        const usersSnapshot = await getDocs(usersCol);
+        const usersList = usersSnapshot.docs.map(doc => ({ uid: doc.id, ...doc.data() } as UserProfile));
+        setUsers(usersList);
+
+        // Fetch stats (approximate for now, or calculate from fetched data)
+        const semestersCol = collection(db, 'semesters');
+        const semestersSnapshot = await getDocs(semestersCol);
+        
+        const coursesCol = collection(db, 'courses');
+        const coursesSnapshot = await getDocs(coursesCol);
+
+        setStats({
+          totalUsers: usersList.length,
+          totalSemesters: semestersSnapshot.size,
+          totalCourses: coursesSnapshot.size
+        });
       } catch (error) {
         console.error('Error fetching admin data:', error);
       } finally {
@@ -227,7 +254,13 @@ export default function AdminDashboard() {
 
   const handleSaveMetadata = async () => {
     if (!metadata) return;
-    console.log('Metadata updated successfully!');
+    try {
+      const { id, ...dataToSave } = metadata;
+      await setDoc(doc(db, 'metadata', 'global'), dataToSave);
+      console.log('Metadata updated successfully!');
+    } catch (error) {
+      console.error('Error saving metadata:', error);
+    }
   };
 
   const addItem = (field: keyof Omit<AppMetadata, 'id' | 'courseTemplates'>, value: string, setter: (v: string) => void) => {
