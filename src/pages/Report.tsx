@@ -20,8 +20,8 @@ export default function Report() {
   });
 
   return (
-    <div className="space-y-8">
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+    <div className="space-y-8 print:space-y-0">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 print:hidden">
         <div>
           <h1 className="text-3xl font-bold text-slate-900">Academic Report</h1>
           <p className="text-slate-600 mt-1">Generate and print your official GradePro report.</p>
@@ -35,8 +35,8 @@ export default function Report() {
         </button>
       </div>
 
-      <div className="bg-white p-8 md:p-12 rounded-2xl shadow-sm border border-slate-200 overflow-x-auto">
-        <div ref={componentRef} className="max-w-4xl mx-auto bg-white p-8">
+      <div className="bg-white p-8 md:p-12 rounded-2xl shadow-sm border border-slate-200 overflow-x-auto print:p-0 print:border-none print:shadow-none print:overflow-visible">
+        <div ref={componentRef} className="max-w-4xl mx-auto bg-white p-8 print:p-0">
           {/* Report Header */}
           <div className="flex items-center justify-between border-b-2 border-slate-900 pb-6 mb-8">
             <div className="flex items-center space-x-3">
