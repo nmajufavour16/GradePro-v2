@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
-import { signInWithPopup, GoogleAuthProvider, signOut as firebaseSignOut, onAuthStateChanged } from 'firebase/auth';
+import { signInWithRedirect, getRedirectResult, GoogleAuthProvider, signOut as firebaseSignOut, onAuthStateChanged } from 'firebase/auth';
 import { doc, getDoc, setDoc } from 'firebase/firestore';
 import { toast } from 'sonner';
 import { auth, db } from '@/src/firebase';
@@ -25,6 +25,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [isLoggingIn, setIsLoggingIn] = useState(false);
 
   useEffect(() => {
+    // Check for redirect result errors
+    getRedirectResult(auth).catch((error) => {
+      console.error('Redirect login error:', error);
+      toast.error('Sign-in failed', {
+        description: error.message || 'An error occurred during sign-in.',
+      });
+      setIsLoggingIn(false);
+    });
+
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
       if (firebaseUser) {
         const userData: User = {
@@ -88,20 +97,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       provider.setCustomParameters({
         prompt: 'select_account'
       });
-      await signInWithPopup(auth, provider);
+      await signInWithRedirect(auth, provider);
     } catch (error: any) {
       console.error('Login error:', error);
-      if (error.code === 'auth/popup-closed-by-user') {
-        toast.error('Sign-in popup closed', {
-          description: 'The sign-in popup was closed before completing. Please try again and keep the popup open. If you see an "unauthorized domain" error, ensure gradepro-v2.vercel.app is added to your Firebase Authorized Domains.',
-          duration: 8000,
-        });
-      } else {
-        toast.error('Sign-in failed', {
-          description: error.message,
-        });
-      }
-    } finally {
+      toast.error('Sign-in failed', {
+        description: error.message,
+      });
       setIsLoggingIn(false);
     }
   };
