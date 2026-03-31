@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { signInWithPopup, GoogleAuthProvider, signOut as firebaseSignOut, onAuthStateChanged } from 'firebase/auth';
 import { doc, getDoc, setDoc } from 'firebase/firestore';
+import { toast } from 'sonner';
 import { auth, db } from '@/src/firebase';
 import { User, UserProfile, OperationType } from '@/src/types';
 import { handleFirestoreError } from '@/src/utils/firebaseErrors';
@@ -90,6 +91,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       await signInWithPopup(auth, provider);
     } catch (error: any) {
       console.error('Login error:', error);
+      if (error.code === 'auth/popup-closed-by-user') {
+        toast.error('Sign-in popup closed', {
+          description: 'The sign-in popup was closed before completing. Please try again and keep the popup open. If you see an "unauthorized domain" error, ensure gradepro-v2.vercel.app is added to your Firebase Authorized Domains.',
+          duration: 8000,
+        });
+      } else {
+        toast.error('Sign-in failed', {
+          description: error.message,
+        });
+      }
     } finally {
       setIsLoggingIn(false);
     }
