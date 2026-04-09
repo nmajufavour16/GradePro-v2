@@ -28,7 +28,7 @@ export default function Layout() {
   return (
     <div className="min-h-screen bg-slate-50 flex flex-col md:flex-row">
       {/* Mobile Header */}
-      <div className="md:hidden flex items-center justify-between p-4 bg-white border-b border-slate-200 print:hidden">
+      <div className="md:hidden flex items-center justify-between p-4 bg-white border-b border-slate-200">
         <GradeProLogo className="h-8" />
         <button onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)} className="p-2 text-slate-600">
           {isMobileMenuOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
@@ -38,7 +38,7 @@ export default function Layout() {
       {/* Sidebar */}
       <div className={`
         fixed inset-y-0 left-0 z-50 bg-white border-r border-slate-200 transform transition-all duration-300 ease-in-out
-        md:relative md:translate-x-0 print:hidden
+        md:relative md:translate-x-0
         ${isMobileMenuOpen ? 'translate-x-0' : '-translate-x-full'}
         ${isCollapsed ? 'md:w-20' : 'md:w-64 w-64'}
       `}>
@@ -107,14 +107,12 @@ export default function Layout() {
       </div>
 
       {/* Main Content */}
-      <main className="flex-1 overflow-y-auto w-full print:overflow-visible print:w-full print:p-0 print:m-0">
-        <div className="p-4 md:p-8 max-w-7xl mx-auto h-full print:p-0 print:max-w-none">
+      <main className="flex-1 overflow-y-auto w-full">
+        <div className="p-4 md:p-8 max-w-7xl mx-auto h-full">
           <Outlet />
         </div>
       </main>
-      <div className="print:hidden">
-        <FloatingAIChat />
-      </div>
+      <FloatingAIChat />
     </div>
   );
 }

@@ -2,7 +2,6 @@ import React from 'react';
 import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { AuthProvider, useAuth } from '@/src/contexts/AuthContext';
 import { DataProvider } from '@/src/contexts/DataContext';
-import { Toaster } from 'sonner';
 import Layout from '@/src/components/Layout';
 import Landing from '@/src/pages/Landing';
 import Dashboard from '@/src/pages/Dashboard';
@@ -46,7 +45,6 @@ export default function App() {
   return (
     <AuthProvider>
       <DataProvider>
-        <Toaster position="top-center" richColors />
         <BrowserRouter>
           <Routes>
             <Route path="/" element={<Landing />} />

@@ -25,7 +25,7 @@ export default function Landing() {
         </button>
       </header>
 
-      <main className="flex-1 flex flex-col items-center justify-start pt-12 md:justify-center md:pt-6 p-6 text-center">
+      <main className="flex-1 flex flex-col items-center justify-center p-6 text-center">
         <div className="max-w-3xl space-y-8">
           <h1 className="text-5xl md:text-6xl font-extrabold text-slate-900 tracking-tight">
             Master your grades with <span className="text-indigo-600">GradePro AI</span>

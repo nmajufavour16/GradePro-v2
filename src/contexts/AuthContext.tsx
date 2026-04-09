@@ -1,7 +1,6 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
-import { signInWithRedirect, getRedirectResult, GoogleAuthProvider, signOut as firebaseSignOut, onAuthStateChanged } from 'firebase/auth';
+import { signInWithCredential, GoogleAuthProvider, signOut as firebaseSignOut } from 'firebase/auth';
 import { doc, getDoc, setDoc } from 'firebase/firestore';
-import { toast } from 'sonner';
 import { auth, db } from '@/src/firebase';
 import { User, UserProfile, OperationType } from '@/src/types';
 import { handleFirestoreError } from '@/src/utils/firebaseErrors';
@@ -24,35 +23,31 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [loading, setLoading] = useState(true);
   const [isLoggingIn, setIsLoggingIn] = useState(false);
 
-  useEffect(() => {
-    // Check for redirect result errors
-    getRedirectResult(auth).catch((error) => {
-      console.error('Redirect login error:', error);
-      toast.error('Sign-in failed', {
-        description: error.message || 'An error occurred during sign-in.',
-      });
-      setIsLoggingIn(false);
-    });
-
-    const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
-      if (firebaseUser) {
-        const userData: User = {
-          uid: firebaseUser.uid,
-          email: firebaseUser.email || '',
-          name: firebaseUser.displayName || '',
-          picture: firebaseUser.photoURL || '',
-        };
+  const fetchUser = async () => {
+    try {
+      const response = await fetch('/api/auth/me');
+      if (response.ok) {
+        const { user: userData, firebaseToken } = await response.json();
+        
+        // Sign in to Firebase with the Google ID token
+        if (firebaseToken) {
+          const credential = GoogleAuthProvider.credential(firebaseToken);
+          await signInWithCredential(auth, credential);
+        }
+        
         setUser(userData);
         await fetchProfile(userData);
       } else {
         setUser(null);
         setProfile(null);
+        await firebaseSignOut(auth);
       }
+    } catch (error) {
+      console.error('Fetch user error:', error);
+    } finally {
       setLoading(false);
-    });
-
-    return () => unsubscribe();
-  }, []);
+    }
+  };
 
   const fetchProfile = async (currentUser: User) => {
     try {
@@ -89,26 +84,46 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
+  useEffect(() => {
+    fetchUser();
+
+    const handleMessage = (event: MessageEvent) => {
+      if (event.data?.type === 'OAUTH_AUTH_SUCCESS') {
+        fetchUser();
+      }
+    };
+    window.addEventListener('message', handleMessage);
+    return () => window.removeEventListener('message', handleMessage);
+  }, []);
+
   const login = async () => {
     if (isLoggingIn) return;
     setIsLoggingIn(true);
     try {
-      const provider = new GoogleAuthProvider();
-      provider.setCustomParameters({
-        prompt: 'select_account'
-      });
-      await signInWithRedirect(auth, provider);
+      const response = await fetch('/api/auth/url');
+      if (!response.ok) throw new Error('Failed to get auth URL');
+      const { url } = await response.json();
+
+      const width = 600;
+      const height = 700;
+      const left = window.screenX + (window.outerWidth - width) / 2;
+      const top = window.screenY + (window.outerHeight - height) / 2;
+
+      window.open(
+        url,
+        'google_oauth',
+        `width=${width},height=${height},left=${left},top=${top}`
+      );
     } catch (error: any) {
       console.error('Login error:', error);
-      toast.error('Sign-in failed', {
-        description: error.message,
-      });
+    } finally {
       setIsLoggingIn(false);
     }
   };
 
   const logout = async () => {
     try {
+      await fetch('/api/auth/logout', { method: 'POST' });
       await firebaseSignOut(auth);
       setUser(null);
       setProfile(null);

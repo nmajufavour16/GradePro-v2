@@ -6,9 +6,10 @@ import { useData } from '@/src/contexts/DataContext';
 import { calculateCGPA } from '@/src/utils/gpa';
 import { GoogleGenAI } from '@google/genai';
 import ReactMarkdown from 'react-markdown';
-import { MessageCircle, Send, Loader2, Sparkles, Plus, Trash2, History, X, Menu, ChevronLeft, ChevronRight } from 'lucide-react';
+import { MessageCircle, Send, Loader2, Sparkles, Plus, Trash2, History, X, Menu, ChevronLeft, ChevronRight, Mic, Square } from 'lucide-react';
 import { ChatSession, ChatMessage } from '@/src/types';
 import { motion, AnimatePresence } from 'motion/react';
+import { useAudioRecorder } from '../hooks/useAudioRecorder';
 
 export default function AIChat() {
   const { user, profile } = useAuth();
@@ -20,6 +21,10 @@ export default function AIChat() {
   const [isLoading, setIsLoading] = useState(false);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
+  
+  const { isRecording, isTranscribing, startRecording, stopRecording } = useAudioRecorder((text) => {
+    setInput(prev => prev + (prev ? ' ' : '') + text);
+  });
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
@@ -27,7 +32,7 @@ export default function AIChat() {
   useEffect(() => {
     if (!user) return;
     const q = query(
-      collection(db, 'chat_sessions'),
+      collection(db, 'chatSessions'),
       where('userId', '==', user.uid)
     );
     
@@ -58,7 +63,7 @@ export default function AIChat() {
     }
 
     const q = query(
-      collection(db, 'chat_messages'),
+      collection(db, 'chatMessages'),
       where('chatId', '==', activeSessionId),
       where('userId', '==', user.uid)
     );
@@ -87,7 +92,7 @@ export default function AIChat() {
   const createNewSession = async () => {
     if (!user) return;
     try {
-      const docRef = await addDoc(collection(db, 'chat_sessions'), {
+      const docRef = await addDoc(collection(db, 'chatSessions'), {
         userId: user.uid,
         title: 'New Chat',
         createdAt: new Date().toISOString(),
@@ -102,15 +107,11 @@ export default function AIChat() {
   const deleteSession = async (e: React.MouseEvent, sessionId: string) => {
     e.stopPropagation();
     try {
-      await deleteDoc(doc(db, 'chat_sessions', sessionId));
+      await deleteDoc(doc(db, 'chatSessions', sessionId));
       
-      const q = query(
-        collection(db, 'chat_messages'), 
-        where('chatId', '==', sessionId),
-        where('userId', '==', user.uid)
-      );
+      const q = query(collection(db, 'chatMessages'), where('chatId', '==', sessionId));
       const snapshot = await getDocs(q);
-      const deletePromises = snapshot.docs.map(messageDoc => deleteDoc(doc(db, 'chat_messages', messageDoc.id)));
+      const deletePromises = snapshot.docs.map(messageDoc => deleteDoc(doc(db, 'chatMessages', messageDoc.id)));
       await Promise.all(deletePromises);
 
       if (activeSessionId === sessionId) {
@@ -133,7 +134,7 @@ export default function AIChat() {
     try {
       // Create session if none exists
       if (!currentSessionId) {
-        const docRef = await addDoc(collection(db, 'chat_sessions'), {
+        const docRef = await addDoc(collection(db, 'chatSessions'), {
           userId: user.uid,
           title: userMessage.substring(0, 30) + (userMessage.length > 30 ? '...' : ''),
           createdAt: new Date().toISOString(),
@@ -144,7 +145,7 @@ export default function AIChat() {
       }
 
       // Save user message to DB
-      await addDoc(collection(db, 'chat_messages'), {
+      await addDoc(collection(db, 'chatMessages'), {
         chatId: currentSessionId,
         userId: user.uid,
         role: 'user',
@@ -206,7 +207,7 @@ export default function AIChat() {
       const aiResponse = response.text || 'I am not sure how to respond to that.';
 
       // Save AI message to DB
-      await addDoc(collection(db, 'chat_messages'), {
+      await addDoc(collection(db, 'chatMessages'), {
         chatId: currentSessionId,
         userId: user.uid,
         role: 'assistant',
@@ -222,12 +223,12 @@ export default function AIChat() {
           contents: [{ role: 'user', parts: [{ text: `Generate a very short, 3-5 word title for a chat that starts with this question: "${userMessage}". Output ONLY the title.` }] }]
         });
         const newTitle = titleResponse.text?.trim().replace(/^"|"$/g, '') || userMessage.substring(0, 30);
-        await updateDoc(doc(db, 'chat_sessions', currentSessionId), {
+        await updateDoc(doc(db, 'chatSessions', currentSessionId), {
           title: newTitle,
           updatedAt: new Date().toISOString()
         });
       } else {
-        await updateDoc(doc(db, 'chat_sessions', currentSessionId), {
+        await updateDoc(doc(db, 'chatSessions', currentSessionId), {
           updatedAt: new Date().toISOString()
         });
       }
@@ -235,7 +236,7 @@ export default function AIChat() {
     } catch (error) {
       console.error('AI Error:', error);
       if (currentSessionId) {
-        await addDoc(collection(db, 'chat_messages'), {
+        await addDoc(collection(db, 'chatMessages'), {
           chatId: currentSessionId,
           userId: user.uid,
           role: 'assistant',
@@ -401,6 +402,14 @@ export default function AIChat() {
               </div>
             </div>
           )}
+          {isTranscribing && (
+            <div className="flex justify-start">
+              <div className="bg-slate-50 p-4 rounded-2xl rounded-tl-none border border-slate-100 flex items-center space-x-2">
+                <Loader2 className="h-4 w-4 text-indigo-600 animate-spin" />
+                <span className="text-sm text-slate-500">Transcribing audio...</span>
+              </div>
+            </div>
+          )}
           <div ref={messagesEndRef} />
         </div>
 
@@ -412,13 +421,31 @@ export default function AIChat() {
               value={input}
               onChange={(e) => setInput(e.target.value)}
               onKeyDown={(e) => e.key === 'Enter' && handleSend()}
-              placeholder="Message GradePro AI..."
-              disabled={isLoading}
+              placeholder={isRecording ? "Recording..." : "Message GradePro AI..."}
+              disabled={isRecording || isTranscribing}
               className="flex-1 px-4 py-3 bg-slate-50 border border-slate-200 focus:bg-white focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 rounded-xl text-sm transition-all outline-none disabled:opacity-50"
             />
+            {isRecording ? (
+              <button
+                onClick={stopRecording}
+                className="p-3 bg-red-500 text-white rounded-xl hover:bg-red-600 transition-colors animate-pulse"
+                title="Stop Recording"
+              >
+                <Square className="h-5 w-5" />
+              </button>
+            ) : (
+              <button
+                onClick={startRecording}
+                disabled={isLoading || isTranscribing}
+                className="p-3 bg-slate-100 text-slate-600 rounded-xl hover:bg-slate-200 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                title="Voice Message"
+              >
+                <Mic className="h-5 w-5" />
+              </button>
+            )}
             <button
               onClick={handleSend}
-              disabled={!input.trim() || isLoading}
+              disabled={!input.trim() || isLoading || isTranscribing || isRecording}
               className="p-3 bg-indigo-600 text-white rounded-xl hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
             >
               <Send className="h-5 w-5" />

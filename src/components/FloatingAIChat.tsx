@@ -4,12 +4,11 @@ import { useData } from '../contexts/DataContext';
 import { calculateCGPA } from '../utils/gpa';
 import { GoogleGenAI } from '@google/genai';
 import ReactMarkdown from 'react-markdown';
-import { MessageCircle, Send, Loader2, Sparkles, Plus, X, ChevronLeft, ChevronRight, History, Trash2 } from 'lucide-react';
+import { MessageCircle, Send, Loader2, Sparkles, Plus, X, ChevronLeft, ChevronRight, History, Mic, Square, Trash2 } from 'lucide-react';
 import { ChatSession, ChatMessage } from '../types';
 import { motion, AnimatePresence } from 'motion/react';
 import { useLocation } from 'react-router-dom';
-import { collection, query, where, orderBy, getDocs, addDoc, deleteDoc, doc, updateDoc } from 'firebase/firestore';
-import { db } from '../firebase';
+import { useAudioRecorder } from '../hooks/useAudioRecorder';
 
 export default function FloatingAIChat() {
   const { user, profile } = useAuth();
@@ -23,6 +22,10 @@ export default function FloatingAIChat() {
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [isHistoryCollapsed, setIsHistoryCollapsed] = useState(false);
+  
+  const { isRecording, isTranscribing, startRecording, stopRecording } = useAudioRecorder((text) => {
+    setInput(prev => prev + (prev ? ' ' : '') + text);
+  });
   
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
@@ -42,21 +45,13 @@ export default function FloatingAIChat() {
     
     const fetchSessions = async () => {
       try {
-        const q = query(
-          collection(db, 'chat_sessions'),
-          where('userId', '==', user.uid)
-        );
-        const snapshot = await getDocs(q);
-        const loadedSessions = snapshot.docs.map(doc => ({
-          id: doc.id,
-          ...doc.data()
-        })) as ChatSession[];
-        
-        loadedSessions.sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime());
-        
-        setSessions(loadedSessions);
-        if (loadedSessions.length > 0 && !activeSessionId) {
-          setActiveSessionId(loadedSessions[0].id);
+        const res = await fetch('/api/chat/sessions');
+        if (res.ok) {
+          const loadedSessions = await res.json();
+          setSessions(loadedSessions);
+          if (loadedSessions.length > 0 && !activeSessionId) {
+            setActiveSessionId(loadedSessions[0].id);
+          }
         }
       } catch (error) {
         console.error('Error fetching sessions:', error);
@@ -64,6 +59,7 @@ export default function FloatingAIChat() {
     };
 
     fetchSessions();
+    // In a real app, you might want to use polling or WebSockets for real-time updates
   }, [user, isOpen, activeSessionId, isVisible]);
 
   // Load messages for active session
@@ -75,20 +71,11 @@ export default function FloatingAIChat() {
 
     const fetchMessages = async () => {
       try {
-        const q = query(
-          collection(db, 'chat_messages'),
-          where('chatId', '==', activeSessionId),
-          where('userId', '==', user.uid)
-        );
-        const snapshot = await getDocs(q);
-        const loadedMessages = snapshot.docs.map(doc => ({
-          id: doc.id,
-          ...doc.data()
-        })) as ChatMessage[];
-        
-        loadedMessages.sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
-        
-        setMessages(loadedMessages);
+        const res = await fetch(`/api/chat/sessions/${activeSessionId}/messages`);
+        if (res.ok) {
+          const loadedMessages = await res.json();
+          setMessages(loadedMessages);
+        }
       } catch (error) {
         console.error('Error fetching messages:', error);
       }
@@ -106,18 +93,18 @@ export default function FloatingAIChat() {
   const createNewSession = async () => {
     if (!user) return;
     try {
-      const newSessionData = {
-        userId: user.uid,
-        title: 'New Chat',
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString()
-      };
-      const docRef = await addDoc(collection(db, 'chat_sessions'), newSessionData);
-      const newSession = { id: docRef.id, ...newSessionData } as ChatSession;
-      setSessions(prev => [newSession, ...prev]);
-      setActiveSessionId(newSession.id);
-      setShowHistory(false);
-      setMessages([]);
+      const res = await fetch('/api/chat/sessions', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ title: 'New Chat' })
+      });
+      if (res.ok) {
+        const newSession = await res.json();
+        setSessions(prev => [newSession, ...prev]);
+        setActiveSessionId(newSession.id);
+        setShowHistory(false);
+        setMessages([]);
+      }
     } catch (error) {
       console.error("Error creating session", error);
     }
@@ -126,24 +113,16 @@ export default function FloatingAIChat() {
   const deleteSession = async (e: React.MouseEvent, sessionId: string) => {
     e.stopPropagation();
     try {
-      await deleteDoc(doc(db, 'chat_sessions', sessionId));
-      
-      // Also delete messages for this session
-      const q = query(
-        collection(db, 'chat_messages'), 
-        where('chatId', '==', sessionId),
-        where('userId', '==', user.uid)
-      );
-      const snapshot = await getDocs(q);
-      snapshot.forEach(async (msgDoc) => {
-        await deleteDoc(doc(db, 'chat_messages', msgDoc.id));
+      const res = await fetch(`/api/chat/sessions/${sessionId}`, {
+        method: 'DELETE'
       });
-
-      const remainingSessions = sessions.filter(s => s.id !== sessionId);
-      setSessions(remainingSessions);
-      if (activeSessionId === sessionId) {
-        setActiveSessionId(remainingSessions.length > 0 ? remainingSessions[0].id : null);
-        setMessages([]);
+      if (res.ok) {
+        const remainingSessions = sessions.filter(s => s.id !== sessionId);
+        setSessions(remainingSessions);
+        if (activeSessionId === sessionId) {
+          setActiveSessionId(remainingSessions.length > 0 ? remainingSessions[0].id : null);
+          setMessages([]);
+        }
       }
     } catch (error) {
       console.error("Error deleting session:", error);
@@ -161,17 +140,19 @@ export default function FloatingAIChat() {
     try {
       // Create session if none exists
       if (!currentSessionId) {
-        const newSessionData = {
-          userId: user.uid,
-          title: 'New Chat',
-          createdAt: new Date().toISOString(),
-          updatedAt: new Date().toISOString()
-        };
-        const docRef = await addDoc(collection(db, 'chat_sessions'), newSessionData);
-        const newSession = { id: docRef.id, ...newSessionData } as ChatSession;
-        currentSessionId = newSession.id;
-        setSessions(prev => [newSession, ...prev]);
-        setActiveSessionId(currentSessionId);
+        const res = await fetch('/api/chat/sessions', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ title: 'New Chat' })
+        });
+        if (res.ok) {
+          const newSession = await res.json();
+          currentSessionId = newSession.id;
+          setSessions(prev => [newSession, ...prev]);
+          setActiveSessionId(currentSessionId);
+        } else {
+          throw new Error('Failed to create session');
+        }
       }
 
       // Optimistically add user message to UI
@@ -186,15 +167,11 @@ export default function FloatingAIChat() {
       setMessages(prev => [...prev, tempUserMsg]);
 
       // Save user message to DB
-      const userMsgData = {
-        chatId: currentSessionId!,
-        userId: user.uid,
-        role: 'user',
-        content: userMessage,
-        createdAt: new Date().toISOString()
-      };
-      await addDoc(collection(db, 'chat_messages'), userMsgData);
-      await updateDoc(doc(db, 'chat_sessions', currentSessionId!), { updatedAt: new Date().toISOString() });
+      await fetch(`/api/chat/sessions/${currentSessionId}/messages`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ role: 'user', content: userMessage })
+      });
 
       // Prepare history for Gemini
       const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
@@ -250,16 +227,16 @@ export default function FloatingAIChat() {
       const aiResponse = response.text || 'I am not sure how to respond to that.';
 
       // Save AI message to DB
-      const aiMsgData = {
-        chatId: currentSessionId!,
-        userId: user.uid,
-        role: 'assistant',
-        content: aiResponse,
-        createdAt: new Date().toISOString()
-      };
-      const aiMsgRef = await addDoc(collection(db, 'chat_messages'), aiMsgData);
-      const newAiMsg = { id: aiMsgRef.id, ...aiMsgData } as ChatMessage;
-      setMessages(prev => [...prev, newAiMsg]);
+      const aiMsgRes = await fetch(`/api/chat/sessions/${currentSessionId}/messages`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ role: 'assistant', content: aiResponse })
+      });
+
+      if (aiMsgRes.ok) {
+        const newAiMsg = await aiMsgRes.json();
+        setMessages(prev => [...prev, newAiMsg]);
+      }
 
       // Update session title if it's still "New Chat"
       const session = sessions.find(s => s.id === currentSessionId);
@@ -270,7 +247,12 @@ export default function FloatingAIChat() {
         });
         const newTitle = titleResponse.text?.trim().replace(/^"|"$/g, '') || userMessage.substring(0, 30);
         
-        await updateDoc(doc(db, 'chat_sessions', currentSessionId!), { title: newTitle });
+        await fetch(`/api/chat/sessions/${currentSessionId}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ title: newTitle })
+        });
+        
         setSessions(prev => prev.map(s => s.id === currentSessionId ? { ...s, title: newTitle } : s));
       }
 
@@ -278,16 +260,15 @@ export default function FloatingAIChat() {
       console.error('AI Error:', error);
       if (currentSessionId) {
         const errorMsg = 'Sorry, I encountered an error. Please try again later.';
-        const errData = {
-          chatId: currentSessionId!,
-          userId: user.uid,
-          role: 'assistant',
-          content: errorMsg,
-          createdAt: new Date().toISOString()
-        };
-        const errRef = await addDoc(collection(db, 'chat_messages'), errData);
-        const newErrMsg = { id: errRef.id, ...errData } as ChatMessage;
-        setMessages(prev => [...prev, newErrMsg]);
+        const errRes = await fetch(`/api/chat/sessions/${currentSessionId}/messages`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ role: 'assistant', content: errorMsg })
+        });
+        if (errRes.ok) {
+          const newErrMsg = await errRes.json();
+          setMessages(prev => [...prev, newErrMsg]);
+        }
       }
     } finally {
       setIsLoading(false);
@@ -450,6 +431,14 @@ export default function FloatingAIChat() {
                       </div>
                     </div>
                   )}
+                  {isTranscribing && (
+                    <div className="flex justify-start">
+                      <div className="bg-slate-50 p-3 rounded-2xl rounded-tl-none border border-slate-100 shadow-sm flex items-center space-x-2">
+                        <Loader2 className="h-4 w-4 text-indigo-600 animate-spin" />
+                        <span className="text-xs text-slate-500">Transcribing...</span>
+                      </div>
+                    </div>
+                  )}
                   <div ref={messagesEndRef} />
                 </div>
 
@@ -461,13 +450,31 @@ export default function FloatingAIChat() {
                       value={input}
                       onChange={(e) => setInput(e.target.value)}
                       onKeyDown={(e) => e.key === 'Enter' && handleSend()}
-                      placeholder="Ask GradePro AI..."
-                      disabled={isLoading}
+                      placeholder={isRecording ? "Recording..." : "Ask GradePro AI..."}
+                      disabled={isRecording || isTranscribing}
                       className="flex-1 px-4 py-2 bg-slate-50 border border-slate-200 focus:bg-white focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 rounded-xl text-sm transition-all outline-none disabled:opacity-50"
                     />
+                    {isRecording ? (
+                      <button
+                        onClick={stopRecording}
+                        className="p-2 bg-red-500 text-white rounded-xl hover:bg-red-600 transition-colors animate-pulse"
+                        title="Stop Recording"
+                      >
+                        <Square className="h-4 w-4" />
+                      </button>
+                    ) : (
+                      <button
+                        onClick={startRecording}
+                        disabled={isLoading || isTranscribing}
+                        className="p-2 bg-slate-100 text-slate-600 rounded-xl hover:bg-slate-200 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                        title="Voice Message"
+                      >
+                        <Mic className="h-4 w-4" />
+                      </button>
+                    )}
                     <button
                       onClick={handleSend}
-                      disabled={!input.trim() || isLoading}
+                      disabled={!input.trim() || isLoading || isTranscribing || isRecording}
                       className="p-2 bg-indigo-600 text-white rounded-xl hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                     >
                       <Send className="h-4 w-4" />
