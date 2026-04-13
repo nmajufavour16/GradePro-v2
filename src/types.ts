@@ -50,6 +50,8 @@ export interface ChatMessage {
   userId: string;
   role: 'user' | 'assistant';
   content: string;
+  imageUrl?: string;
+  isThinking?: boolean;
   createdAt: string;
 }
 

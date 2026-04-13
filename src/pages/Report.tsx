@@ -1,18 +1,59 @@
-import React, { useRef } from 'react';
+import React, { useRef, useState } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { useData } from '../contexts/DataContext';
 import { calculateCGPA, calculateGPA } from '../utils/gpa';
 import { useReactToPrint } from 'react-to-print';
-import { Printer, Download, BookOpen, GraduationCap } from 'lucide-react';
+import { Printer, Download, BookOpen, GraduationCap, Sparkles, Loader2 } from 'lucide-react';
 import { GradeProLogo } from '../components/GradeProLogo';
+import { GoogleGenAI } from '@google/genai';
+import ReactMarkdown from 'react-markdown';
 
 export default function Report() {
   const { profile } = useAuth();
   const { semesters, courses } = useData();
   const componentRef = useRef<HTMLDivElement>(null);
+  const [aiInsights, setAiInsights] = useState<string | null>(null);
+  const [isGenerating, setIsGenerating] = useState(false);
 
   const cgpa = calculateCGPA(semesters, courses);
   const totalUnits = courses.reduce((acc, c) => acc + c.units, 0);
+
+  const generateInsights = async () => {
+    setIsGenerating(true);
+    try {
+      const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
+      
+      const academicData = semesters.map(s => {
+        const sCourses = courses.filter(c => c.semesterId === s.id);
+        const gpa = calculateGPA(sCourses);
+        return `Semester: ${s.name} (${s.level}) - GPA: ${gpa.toFixed(2)}, Courses: ${sCourses.map(c => `${c.code} (${c.grade})`).join(', ')}`;
+      }).join('\n');
+
+      const prompt = `
+        Analyze this student's academic performance and provide 3-4 actionable insights or study tips.
+        Student: ${profile?.displayName}
+        Department: ${profile?.department}
+        Level: ${profile?.level}
+        Current CGPA: ${cgpa.toFixed(2)}
+        Target CGPA: ${profile?.targetCGPA}
+        
+        Academic History:
+        ${academicData}
+        
+        Provide the response in a professional, encouraging tone using markdown.
+      `;
+
+      const result = await ai.models.generateContent({
+        model: 'gemini-3-flash-preview',
+        contents: [{ role: 'user', parts: [{ text: prompt }] }],
+      });
+      setAiInsights(result.text || '');
+    } catch (error) {
+      console.error('Error generating insights:', error);
+    } finally {
+      setIsGenerating(false);
+    }
+  };
 
   const handlePrint = useReactToPrint({
     contentRef: componentRef,
@@ -26,13 +67,23 @@ export default function Report() {
           <h1 className="text-3xl font-bold text-slate-900">Academic Report</h1>
           <p className="text-slate-600 mt-1">Generate and print your official GradePro report.</p>
         </div>
-        <button
-          onClick={handlePrint}
-          className="flex items-center justify-center px-6 py-3 bg-indigo-600 text-white font-medium rounded-xl hover:bg-indigo-700 transition-colors shadow-sm"
-        >
-          <Printer className="h-5 w-5 mr-2" />
-          Print / Save as PDF
-        </button>
+        <div className="flex items-center gap-3">
+          <button
+            onClick={generateInsights}
+            disabled={isGenerating}
+            className="flex items-center justify-center px-6 py-3 bg-emerald-600 text-white font-medium rounded-xl hover:bg-emerald-700 transition-colors shadow-sm disabled:opacity-50"
+          >
+            {isGenerating ? <Loader2 className="h-5 w-5 mr-2 animate-spin" /> : <Sparkles className="h-5 w-5 mr-2" />}
+            AI Insights
+          </button>
+          <button
+            onClick={handlePrint}
+            className="flex items-center justify-center px-6 py-3 bg-indigo-600 text-white font-medium rounded-xl hover:bg-indigo-700 transition-colors shadow-sm"
+          >
+            <Printer className="h-5 w-5 mr-2" />
+            Print / Save as PDF
+          </button>
+        </div>
       </div>
 
       <div className="bg-white p-8 md:p-12 rounded-2xl shadow-sm border border-slate-200 overflow-x-auto">
@@ -89,6 +140,19 @@ export default function Report() {
             </div>
           </div>
 
+          {/* AI Insights Section */}
+          {aiInsights && (
+            <div className="mb-12 p-6 bg-emerald-50 rounded-2xl border border-emerald-100 break-inside-avoid">
+              <div className="flex items-center space-x-2 mb-4">
+                <Sparkles className="h-5 w-5 text-emerald-600" />
+                <h3 className="text-lg font-bold text-emerald-900">AI Performance Insights</h3>
+              </div>
+              <div className="prose prose-sm max-w-none prose-emerald">
+                <ReactMarkdown>{aiInsights}</ReactMarkdown>
+              </div>
+            </div>
+          )}
+
           {/* Semester Breakdown */}
           <div className="space-y-10">
             <h3 className="text-xl font-black text-slate-900 uppercase tracking-wider border-b border-slate-200 pb-2">Academic Record</h3>
@@ -128,7 +192,7 @@ export default function Report() {
                           semesterCourses.map(course => (
                             <tr key={course.id}>
                               <td className="px-4 py-2 text-sm font-bold text-slate-900 border-r border-slate-200">{course.code}</td>
-                              <td className="px-4 py-2 text-sm text-slate-700 border-r border-slate-200">{course.title || '-'}</td>
+                              <td className="px-4 py-2 text-sm text-700 border-r border-slate-200">{course.title || '-'}</td>
                               <td className="px-4 py-2 text-sm text-center font-medium text-slate-900 border-r border-slate-200">{course.units}</td>
                               <td className="px-4 py-2 text-sm text-center font-bold text-slate-900 border-r border-slate-200">{course.grade}</td>
                               <td className="px-4 py-2 text-sm text-center font-medium text-slate-900">{(course.gradePoint * course.units).toFixed(1)}</td>

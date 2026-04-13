@@ -29,7 +29,7 @@ async function startServer() {
   }));
 
   // OAuth Routes
-  app.get('/api/auth/url', (req, res) => {
+  app.get('/api/session/url', (req, res) => {
     const rootUrl = 'https://accounts.google.com/o/oauth2/v2/auth';
     const appUrl = process.env.APP_URL;
     
@@ -130,7 +130,7 @@ async function startServer() {
     }
   });
 
-  app.get('/api/auth/me', (req, res) => {
+  app.get('/api/session/current', (req, res) => {
     if (req.session?.user) {
       res.json({
         user: req.session.user,
@@ -141,7 +141,7 @@ async function startServer() {
     }
   });
 
-  app.post('/api/auth/logout', (req, res) => {
+  app.post('/api/session/logout', (req, res) => {
     req.session = null;
     res.json({ success: true });
   });

@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
-import { signInWithCredential, GoogleAuthProvider, signOut as firebaseSignOut } from 'firebase/auth';
+import { signInWithPopup, GoogleAuthProvider, signOut as firebaseSignOut, onAuthStateChanged } from 'firebase/auth';
 import { doc, getDoc, setDoc } from 'firebase/firestore';
 import { auth, db } from '@/src/firebase';
 import { User, UserProfile, OperationType } from '@/src/types';
@@ -23,31 +23,27 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [loading, setLoading] = useState(true);
   const [isLoggingIn, setIsLoggingIn] = useState(false);
 
-  const fetchUser = async () => {
-    try {
-      const response = await fetch('/api/auth/me');
-      if (response.ok) {
-        const { user: userData, firebaseToken } = await response.json();
-        
-        // Sign in to Firebase with the Google ID token
-        if (firebaseToken) {
-          const credential = GoogleAuthProvider.credential(firebaseToken);
-          await signInWithCredential(auth, credential);
-        }
-        
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
+      if (firebaseUser) {
+        const userData: User = {
+          id: firebaseUser.uid,
+          uid: firebaseUser.uid,
+          email: firebaseUser.email || '',
+          name: firebaseUser.displayName || '',
+          picture: firebaseUser.photoURL || '',
+        };
         setUser(userData);
         await fetchProfile(userData);
       } else {
         setUser(null);
         setProfile(null);
-        await firebaseSignOut(auth);
       }
-    } catch (error) {
-      console.error('Fetch user error:', error);
-    } finally {
       setLoading(false);
-    }
-  };
+    });
+
+    return () => unsubscribe();
+  }, []);
 
   const fetchProfile = async (currentUser: User) => {
     try {
@@ -80,40 +76,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         setProfile(newProfile);
       }
     } catch (error) {
+      console.error('fetchProfile error:', error);
       handleFirestoreError(error, OperationType.GET, `users/${currentUser.uid}`);
     }
   };
-
-  useEffect(() => {
-    fetchUser();
-
-    const handleMessage = (event: MessageEvent) => {
-      if (event.data?.type === 'OAUTH_AUTH_SUCCESS') {
-        fetchUser();
-      }
-    };
-    window.addEventListener('message', handleMessage);
-    return () => window.removeEventListener('message', handleMessage);
-  }, []);
 
   const login = async () => {
     if (isLoggingIn) return;
     setIsLoggingIn(true);
     try {
-      const response = await fetch('/api/auth/url');
-      if (!response.ok) throw new Error('Failed to get auth URL');
-      const { url } = await response.json();
-
-      const width = 600;
-      const height = 700;
-      const left = window.screenX + (window.outerWidth - width) / 2;
-      const top = window.screenY + (window.outerHeight - height) / 2;
-
-      window.open(
-        url,
-        'google_oauth',
-        `width=${width},height=${height},left=${left},top=${top}`
-      );
+      const provider = new GoogleAuthProvider();
+      await signInWithPopup(auth, provider);
     } catch (error: any) {
       console.error('Login error:', error);
     } finally {
@@ -123,7 +96,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const logout = async () => {
     try {
-      await fetch('/api/auth/logout', { method: 'POST' });
       await firebaseSignOut(auth);
       setUser(null);
       setProfile(null);
@@ -133,13 +105,21 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   const updateProfile = async (data: Partial<UserProfile>) => {
-    if (!user || !profile) return;
+    if (!user) return;
     try {
-      const updated = { ...profile, ...data };
+      const updated = { 
+        role: user.email === 'nmajufavour16@gmail.com' ? 'admin' : 'user',
+        ...profile, 
+        ...data, 
+        uid: user.uid, 
+        email: user.email 
+      } as UserProfile;
       await setDoc(doc(db, 'users', user.uid), updated, { merge: true });
       setProfile(updated);
     } catch (error) {
+      console.error('Update profile error:', error);
       handleFirestoreError(error, OperationType.UPDATE, `users/${user.uid}`);
+      throw error;
     }
   };
 

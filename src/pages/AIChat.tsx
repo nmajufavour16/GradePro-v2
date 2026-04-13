@@ -4,9 +4,9 @@ import { db } from '@/src/firebase';
 import { useAuth } from '@/src/contexts/AuthContext';
 import { useData } from '@/src/contexts/DataContext';
 import { calculateCGPA } from '@/src/utils/gpa';
-import { GoogleGenAI } from '@google/genai';
+import { GoogleGenAI, ThinkingLevel } from '@google/genai';
 import ReactMarkdown from 'react-markdown';
-import { MessageCircle, Send, Loader2, Sparkles, Plus, Trash2, History, X, Menu, ChevronLeft, ChevronRight, Mic, Square } from 'lucide-react';
+import { MessageCircle, Send, Loader2, Sparkles, Plus, Trash2, History, X, Menu, ChevronLeft, ChevronRight, Mic, Square, Image as ImageIcon, Brain } from 'lucide-react';
 import { ChatSession, ChatMessage } from '@/src/types';
 import { motion, AnimatePresence } from 'motion/react';
 import { useAudioRecorder } from '../hooks/useAudioRecorder';
@@ -21,6 +21,9 @@ export default function AIChat() {
   const [isLoading, setIsLoading] = useState(false);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
+  const [selectedImage, setSelectedImage] = useState<string | null>(null);
+  const [isHighThinking, setIsHighThinking] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   
   const { isRecording, isTranscribing, startRecording, stopRecording } = useAudioRecorder((text) => {
     setInput(prev => prev + (prev ? ' ' : '') + text);
@@ -123,12 +126,27 @@ export default function AIChat() {
     }
   };
 
+  const handleImageSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setSelectedImage(reader.result as string);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
   const handleSend = async () => {
-    if (!input.trim() || isLoading || !user) return;
+    if ((!input.trim() && !selectedImage) || isLoading || !user) return;
 
     let currentSessionId = activeSessionId;
     const userMessage = input.trim();
+    const currentImage = selectedImage;
+    const currentThinking = isHighThinking;
+    
     setInput('');
+    setSelectedImage(null);
     setIsLoading(true);
 
     try {
@@ -136,7 +154,7 @@ export default function AIChat() {
       if (!currentSessionId) {
         const docRef = await addDoc(collection(db, 'chatSessions'), {
           userId: user.uid,
-          title: userMessage.substring(0, 30) + (userMessage.length > 30 ? '...' : ''),
+          title: userMessage ? (userMessage.substring(0, 30) + (userMessage.length > 30 ? '...' : '')) : 'Image Analysis',
           createdAt: new Date().toISOString(),
           updatedAt: new Date().toISOString()
         });
@@ -149,7 +167,9 @@ export default function AIChat() {
         chatId: currentSessionId,
         userId: user.uid,
         role: 'user',
-        content: userMessage,
+        content: userMessage || (currentImage ? 'Analyzed an image' : ''),
+        imageUrl: currentImage || undefined,
+        isThinking: currentThinking,
         createdAt: new Date().toISOString()
       });
 
@@ -177,11 +197,6 @@ export default function AIChat() {
         Current CGPA: ${cgpa} / ${profile?.gradingScale || 5.0}
         Target CGPA: ${profile?.targetCGPA || 4.5}
         Total Units: ${totalUnits}
-        Recent academic data:
-        ${semesters.map(s => {
-          const sCourses = courses.filter(c => c.semesterId === s.id);
-          return `Semester: ${s.name} (${s.level}) - Courses: ${sCourses.map(c => `${c.code} (${c.grade})`).join(', ')}`;
-        }).join('\n')}
       `;
 
       const historyContents = messages.map(m => ({
@@ -189,19 +204,42 @@ export default function AIChat() {
         parts: [{ text: m.content }]
       }));
       
+      const currentParts: any[] = [];
+      if (userMessage) {
+        currentParts.push({ text: userMessage });
+      }
+      if (currentImage) {
+        const base64Data = currentImage.split(',')[1];
+        const mimeType = currentImage.split(';')[0].split(':')[1];
+        currentParts.push({
+          inlineData: {
+            data: base64Data,
+            mimeType: mimeType
+          }
+        });
+      }
+
       historyContents.push({
         role: 'user',
-        parts: [{ text: userMessage }]
+        parts: currentParts
       });
+
+      // Select model based on input
+      const modelName = (currentImage || currentThinking) ? 'gemini-3.1-pro-preview' : 'gemini-3-flash-preview';
+      const config: any = {
+        systemInstruction: context,
+        maxOutputTokens: 4096,
+      };
+
+      if (currentThinking) {
+        config.thinkingConfig = { thinkingLevel: ThinkingLevel.HIGH };
+      }
 
       // Get AI response
       const response = await ai.models.generateContent({
-        model: 'gemini-3-flash-preview',
+        model: modelName,
         contents: historyContents,
-        config: {
-          systemInstruction: context,
-          maxOutputTokens: 2048,
-        }
+        config: config
       });
       
       const aiResponse = response.text || 'I am not sure how to respond to that.';
@@ -219,10 +257,10 @@ export default function AIChat() {
       const session = sessions.find(s => s.id === currentSessionId);
       if (session && (session.title === 'New Chat' || messages.length === 0)) {
         const titleResponse = await ai.models.generateContent({
-          model: 'gemini-3-flash-preview',
-          contents: [{ role: 'user', parts: [{ text: `Generate a very short, 3-5 word title for a chat that starts with this question: "${userMessage}". Output ONLY the title.` }] }]
+          model: 'gemini-3.1-flash-lite-preview',
+          contents: [{ role: 'user', parts: [{ text: `Generate a very short, 3-5 word title for a chat that starts with this: "${userMessage || 'Image Analysis'}". Output ONLY the title.` }] }]
         });
-        const newTitle = titleResponse.text?.trim().replace(/^"|"$/g, '') || userMessage.substring(0, 30);
+        const newTitle = titleResponse.text?.trim().replace(/^"|"$/g, '') || (userMessage ? userMessage.substring(0, 30) : 'Image Analysis');
         await updateDoc(doc(db, 'chatSessions', currentSessionId), {
           title: newTitle,
           updatedAt: new Date().toISOString()
@@ -384,12 +422,24 @@ export default function AIChat() {
                     ? 'bg-indigo-600 text-white rounded-tr-none' 
                     : 'bg-slate-50 text-slate-800 border border-slate-100 rounded-tl-none'}
                 `}>
+                  {msg.imageUrl && (
+                    <div className="mb-3 rounded-lg overflow-hidden border border-slate-200 bg-white">
+                      <img src={msg.imageUrl} alt="Uploaded content" className="max-h-64 w-auto object-contain" referrerPolicy="no-referrer" />
+                    </div>
+                  )}
                   {msg.role === 'assistant' ? (
                     <div className="prose prose-sm max-w-none prose-indigo">
                       <ReactMarkdown>{msg.content}</ReactMarkdown>
                     </div>
                   ) : (
-                    msg.content
+                    <div className="flex flex-col gap-1">
+                      {msg.content}
+                      {msg.isThinking && (
+                        <span className="text-[10px] opacity-70 flex items-center gap-1">
+                          <Brain className="h-3 w-3" /> High Thinking Mode
+                        </span>
+                      )}
+                    </div>
                   )}
                 </div>
               </div>
@@ -413,43 +463,98 @@ export default function AIChat() {
           <div ref={messagesEndRef} />
         </div>
 
+        {/* Selected Image Preview */}
+        <AnimatePresence>
+          {selectedImage && (
+            <motion.div 
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: 10 }}
+              className="px-4 py-2 bg-slate-50 border-t border-slate-200 flex items-center gap-4"
+            >
+              <div className="relative h-16 w-16 rounded-lg overflow-hidden border border-slate-300">
+                <img src={selectedImage} alt="Preview" className="h-full w-full object-cover" referrerPolicy="no-referrer" />
+                <button 
+                  onClick={() => setSelectedImage(null)}
+                  className="absolute top-0 right-0 bg-red-500 text-white p-0.5 rounded-bl-lg"
+                >
+                  <X className="h-3 w-3" />
+                </button>
+              </div>
+              <span className="text-xs text-slate-500">Image selected for analysis</span>
+            </motion.div>
+          )}
+        </AnimatePresence>
+
         {/* Input */}
         <div className="p-4 bg-white border-t border-slate-200">
-          <div className="flex items-center space-x-2 max-w-4xl mx-auto">
-            <input
-              type="text"
-              value={input}
-              onChange={(e) => setInput(e.target.value)}
-              onKeyDown={(e) => e.key === 'Enter' && handleSend()}
-              placeholder={isRecording ? "Recording..." : "Message GradePro AI..."}
-              disabled={isRecording || isTranscribing}
-              className="flex-1 px-4 py-3 bg-slate-50 border border-slate-200 focus:bg-white focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 rounded-xl text-sm transition-all outline-none disabled:opacity-50"
-            />
-            {isRecording ? (
+          <div className="flex flex-col gap-3 max-w-4xl mx-auto">
+            <div className="flex items-center justify-between px-1">
+              <div className="flex items-center gap-4">
+                <button
+                  onClick={() => setIsHighThinking(!isHighThinking)}
+                  className={`flex items-center gap-2 px-3 py-1 rounded-full text-xs font-medium transition-all ${
+                    isHighThinking 
+                      ? 'bg-indigo-100 text-indigo-700 border border-indigo-200' 
+                      : 'bg-slate-100 text-slate-600 border border-transparent hover:bg-slate-200'
+                  }`}
+                >
+                  <Brain className={`h-3.5 w-3.5 ${isHighThinking ? 'animate-pulse' : ''}`} />
+                  High Thinking
+                </button>
+                <input
+                  type="file"
+                  ref={fileInputRef}
+                  onChange={handleImageSelect}
+                  accept="image/*"
+                  className="hidden"
+                />
+                <button
+                  onClick={() => fileInputRef.current?.click()}
+                  className="flex items-center gap-2 px-3 py-1 rounded-full text-xs font-medium bg-slate-100 text-slate-600 border border-transparent hover:bg-slate-200 transition-all"
+                >
+                  <ImageIcon className="h-3.5 w-3.5" />
+                  Attach Image
+                </button>
+              </div>
+            </div>
+
+            <div className="flex items-center space-x-2">
+              <input
+                type="text"
+                value={input}
+                onChange={(e) => setInput(e.target.value)}
+                onKeyDown={(e) => e.key === 'Enter' && handleSend()}
+                placeholder={isRecording ? "Recording..." : "Message GradePro AI..."}
+                disabled={isRecording || isTranscribing}
+                className="flex-1 px-4 py-3 bg-slate-50 border border-slate-200 focus:bg-white focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 rounded-xl text-sm transition-all outline-none disabled:opacity-50"
+              />
+              {isRecording ? (
+                <button
+                  onClick={stopRecording}
+                  className="p-3 bg-red-500 text-white rounded-xl hover:bg-red-600 transition-colors animate-pulse"
+                  title="Stop Recording"
+                >
+                  <Square className="h-5 w-5" />
+                </button>
+              ) : (
+                <button
+                  onClick={startRecording}
+                  disabled={isLoading || isTranscribing}
+                  className="p-3 bg-slate-100 text-slate-600 rounded-xl hover:bg-slate-200 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                  title="Voice Message"
+                >
+                  <Mic className="h-5 w-5" />
+                </button>
+              )}
               <button
-                onClick={stopRecording}
-                className="p-3 bg-red-500 text-white rounded-xl hover:bg-red-600 transition-colors animate-pulse"
-                title="Stop Recording"
+                onClick={handleSend}
+                disabled={(!input.trim() && !selectedImage) || isLoading || isTranscribing || isRecording}
+                className="p-3 bg-indigo-600 text-white rounded-xl hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
               >
-                <Square className="h-5 w-5" />
+                <Send className="h-5 w-5" />
               </button>
-            ) : (
-              <button
-                onClick={startRecording}
-                disabled={isLoading || isTranscribing}
-                className="p-3 bg-slate-100 text-slate-600 rounded-xl hover:bg-slate-200 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-                title="Voice Message"
-              >
-                <Mic className="h-5 w-5" />
-              </button>
-            )}
-            <button
-              onClick={handleSend}
-              disabled={!input.trim() || isLoading || isTranscribing || isRecording}
-              className="p-3 bg-indigo-600 text-white rounded-xl hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-            >
-              <Send className="h-5 w-5" />
-            </button>
+            </div>
           </div>
         </div>
       </div>
