@@ -1,5 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
+import { collection, doc, getDoc, getDocs, setDoc, query, where } from 'firebase/firestore';
+import { db } from '../firebase';
 import { AppMetadata, UserProfile } from '../types';
 import { 
   Users, 
@@ -196,15 +198,39 @@ export default function AdminDashboard() {
 
     const fetchData = async () => {
       try {
-        const [metaRes, usersRes, statsRes] = await Promise.all([
-          fetch('/api/metadata'),
-          fetch('/api/admin/users'),
-          fetch('/api/admin/stats')
-        ]);
+        // Fetch Metadata
+        const metaRef = doc(db, 'metadata', 'app-config');
+        const metaSnap = await getDoc(metaRef);
+        if (metaSnap.exists()) {
+          setMetadata({ id: metaSnap.id, ...metaSnap.data() } as AppMetadata);
+        } else {
+          // Initialize empty metadata if it doesn't exist
+          const initialMeta: Omit<AppMetadata, 'id'> = {
+            institutions: [],
+            faculties: [],
+            departments: [],
+            courseTemplates: []
+          };
+          setMetadata({ id: 'app-config', ...initialMeta } as AppMetadata);
+        }
 
-        if (metaRes.ok) setMetadata(await metaRes.json());
-        if (usersRes.ok) setUsers(await usersRes.json());
-        if (statsRes.ok) setStats(await statsRes.json());
+        // Fetch Users
+        const usersSnap = await getDocs(collection(db, 'users'));
+        const loadedUsers = usersSnap.docs.map(doc => ({
+          uid: doc.id,
+          ...doc.data()
+        })) as UserProfile[];
+        setUsers(loadedUsers);
+
+        // Fetch Stats
+        const semestersSnap = await getDocs(collection(db, 'semesters'));
+        const coursesSnap = await getDocs(collection(db, 'courses'));
+
+        setStats({
+          totalUsers: loadedUsers.length,
+          totalSemesters: semestersSnap.size,
+          totalCourses: coursesSnap.size
+        });
       } catch (error) {
         console.error('Error fetching admin data:', error);
       } finally {
@@ -227,7 +253,13 @@ export default function AdminDashboard() {
 
   const handleSaveMetadata = async () => {
     if (!metadata) return;
-    console.log('Metadata updated successfully!');
+    try {
+      const { id, ...data } = metadata;
+      await setDoc(doc(db, 'metadata', 'app-config'), data);
+      console.log('Metadata updated successfully!');
+    } catch (error) {
+      console.error('Error saving metadata:', error);
+    }
   };
 
   const addItem = (field: keyof Omit<AppMetadata, 'id' | 'courseTemplates'>, value: string, setter: (v: string) => void) => {

@@ -73,9 +73,34 @@
         "createdAt": { "type": "string" }
       },
       "required": ["chatId", "userId", "role", "content"]
+    },
+    "AppMetadata": {
+      "title": "AppMetadata",
+      "description": "Global application metadata",
+      "type": "object",
+      "properties": {
+        "institutions": { "type": "array", "items": { "type": "string" } },
+        "faculties": { "type": "array", "items": { "type": "string" } },
+        "departments": { "type": "array", "items": { "type": "string" } },
+        "courseTemplates": { 
+          "type": "array", 
+          "items": { 
+            "type": "object",
+            "properties": {
+              "code": { "type": "string" },
+              "title": { "type": "string" },
+              "units": { "type": "number" }
+            }
+          } 
+        }
+      }
     }
   },
   "firestore": {
+    "/metadata/{configId}": {
+      "schema": { "$ref": "AppMetadata" },
+      "description": "Global application configuration"
+    },
     "/users/{userId}": {
       "schema": { "$ref": "UserProfile" },
       "description": "User profiles"

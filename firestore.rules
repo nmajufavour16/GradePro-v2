@@ -114,6 +114,12 @@ service cloud.firestore {
     // Rules
     // ===============================================================
 
+    // Metadata rules
+    match /metadata/{configId} {
+      allow read: if isAuthenticated();
+      allow write: if isAdmin();
+    }
+
     match /users/{userId} {
       allow read: if isOwner(userId) || isAdmin();
       allow create: if isAuthenticated() && isValidUser(request.resource.data) && ((isOwner(userId) && request.resource.data.role == 'user') || isAdmin());

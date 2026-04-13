@@ -1,4 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
+import { collection, query, where, orderBy, onSnapshot, addDoc, serverTimestamp, doc, getDocs, updateDoc, deleteDoc } from 'firebase/firestore';
+import { db } from '../firebase';
 import { useAuth } from '../contexts/AuthContext';
 import { useData } from '../contexts/DataContext';
 import { calculateCGPA } from '../utils/gpa';
@@ -43,46 +45,60 @@ export default function FloatingAIChat() {
   useEffect(() => {
     if (!user || !isOpen || !isVisible) return;
     
-    const fetchSessions = async () => {
-      try {
-        const res = await fetch('/api/chat/sessions');
-        if (res.ok) {
-          const loadedSessions = await res.json();
-          setSessions(loadedSessions);
-          if (loadedSessions.length > 0 && !activeSessionId) {
-            setActiveSessionId(loadedSessions[0].id);
-          }
-        }
-      } catch (error) {
-        console.error('Error fetching sessions:', error);
+    const q = query(
+      collection(db, 'chatSessions'),
+      where('userId', '==', user.uid)
+    );
+    
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      const loadedSessions = snapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      })) as ChatSession[];
+      
+      // Sort in memory
+      loadedSessions.sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime());
+      
+      setSessions(loadedSessions);
+      if (loadedSessions.length > 0 && !activeSessionId) {
+        setActiveSessionId(loadedSessions[0].id);
       }
-    };
+    }, (error) => {
+      console.error('Error fetching sessions:', error);
+    });
 
-    fetchSessions();
-    // In a real app, you might want to use polling or WebSockets for real-time updates
+    return () => unsubscribe();
   }, [user, isOpen, activeSessionId, isVisible]);
 
   // Load messages for active session
   useEffect(() => {
-    if (!activeSessionId || !isOpen || !isVisible) {
+    if (!activeSessionId || !isOpen || !isVisible || !user) {
       setMessages([]);
       return;
     }
 
-    const fetchMessages = async () => {
-      try {
-        const res = await fetch(`/api/chat/sessions/${activeSessionId}/messages`);
-        if (res.ok) {
-          const loadedMessages = await res.json();
-          setMessages(loadedMessages);
-        }
-      } catch (error) {
-        console.error('Error fetching messages:', error);
-      }
-    };
+    const q = query(
+      collection(db, 'chatMessages'),
+      where('chatId', '==', activeSessionId),
+      where('userId', '==', user.uid)
+    );
 
-    fetchMessages();
-  }, [activeSessionId, isOpen, isVisible]);
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      const loadedMessages = snapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      })) as ChatMessage[];
+      
+      // Sort in memory
+      loadedMessages.sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
+      
+      setMessages(loadedMessages);
+    }, (error) => {
+      console.error('Error fetching messages:', error);
+    });
+
+    return () => unsubscribe();
+  }, [activeSessionId, isOpen, isVisible, user]);
 
   useEffect(() => {
     if (messagesEndRef.current) {
@@ -93,18 +109,14 @@ export default function FloatingAIChat() {
   const createNewSession = async () => {
     if (!user) return;
     try {
-      const res = await fetch('/api/chat/sessions', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ title: 'New Chat' })
+      const docRef = await addDoc(collection(db, 'chatSessions'), {
+        userId: user.uid,
+        title: 'New Chat',
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString()
       });
-      if (res.ok) {
-        const newSession = await res.json();
-        setSessions(prev => [newSession, ...prev]);
-        setActiveSessionId(newSession.id);
-        setShowHistory(false);
-        setMessages([]);
-      }
+      setActiveSessionId(docRef.id);
+      setShowHistory(false);
     } catch (error) {
       console.error("Error creating session", error);
     }
@@ -113,16 +125,16 @@ export default function FloatingAIChat() {
   const deleteSession = async (e: React.MouseEvent, sessionId: string) => {
     e.stopPropagation();
     try {
-      const res = await fetch(`/api/chat/sessions/${sessionId}`, {
-        method: 'DELETE'
-      });
-      if (res.ok) {
+      await deleteDoc(doc(db, 'chatSessions', sessionId));
+      
+      const q = query(collection(db, 'chatMessages'), where('chatId', '==', sessionId));
+      const snapshot = await getDocs(q);
+      const deletePromises = snapshot.docs.map(messageDoc => deleteDoc(doc(db, 'chatMessages', messageDoc.id)));
+      await Promise.all(deletePromises);
+
+      if (activeSessionId === sessionId) {
         const remainingSessions = sessions.filter(s => s.id !== sessionId);
-        setSessions(remainingSessions);
-        if (activeSessionId === sessionId) {
-          setActiveSessionId(remainingSessions.length > 0 ? remainingSessions[0].id : null);
-          setMessages([]);
-        }
+        setActiveSessionId(remainingSessions.length > 0 ? remainingSessions[0].id : null);
       }
     } catch (error) {
       console.error("Error deleting session:", error);
@@ -140,37 +152,23 @@ export default function FloatingAIChat() {
     try {
       // Create session if none exists
       if (!currentSessionId) {
-        const res = await fetch('/api/chat/sessions', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ title: 'New Chat' })
+        const docRef = await addDoc(collection(db, 'chatSessions'), {
+          userId: user.uid,
+          title: userMessage.substring(0, 30) + (userMessage.length > 30 ? '...' : ''),
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString()
         });
-        if (res.ok) {
-          const newSession = await res.json();
-          currentSessionId = newSession.id;
-          setSessions(prev => [newSession, ...prev]);
-          setActiveSessionId(currentSessionId);
-        } else {
-          throw new Error('Failed to create session');
-        }
+        currentSessionId = docRef.id;
+        setActiveSessionId(currentSessionId);
       }
 
-      // Optimistically add user message to UI
-      const tempUserMsg: ChatMessage = {
-        id: Date.now().toString(),
-        chatId: currentSessionId!,
+      // Save user message to DB
+      await addDoc(collection(db, 'chatMessages'), {
+        chatId: currentSessionId,
         userId: user.uid,
         role: 'user',
         content: userMessage,
         createdAt: new Date().toISOString()
-      };
-      setMessages(prev => [...prev, tempUserMsg]);
-
-      // Save user message to DB
-      await fetch(`/api/chat/sessions/${currentSessionId}/messages`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ role: 'user', content: userMessage })
       });
 
       // Prepare history for Gemini
@@ -197,11 +195,6 @@ export default function FloatingAIChat() {
         Current CGPA: ${cgpa} / ${profile?.gradingScale || 5.0}
         Target CGPA: ${profile?.targetCGPA || 4.5}
         Total Units: ${totalUnits}
-        Recent academic data:
-        ${semesters.map(s => {
-          const sCourses = courses.filter(c => c.semesterId === s.id);
-          return `Semester: ${s.name} (${s.level}) - Courses: ${sCourses.map(c => `${c.code} (${c.grade})`).join(', ')}`;
-        }).join('\n')}
       `;
 
       const historyContents = messages.map(m => ({
@@ -227,16 +220,13 @@ export default function FloatingAIChat() {
       const aiResponse = response.text || 'I am not sure how to respond to that.';
 
       // Save AI message to DB
-      const aiMsgRes = await fetch(`/api/chat/sessions/${currentSessionId}/messages`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ role: 'assistant', content: aiResponse })
+      await addDoc(collection(db, 'chatMessages'), {
+        chatId: currentSessionId,
+        userId: user.uid,
+        role: 'assistant',
+        content: aiResponse,
+        createdAt: new Date().toISOString()
       });
-
-      if (aiMsgRes.ok) {
-        const newAiMsg = await aiMsgRes.json();
-        setMessages(prev => [...prev, newAiMsg]);
-      }
 
       // Update session title if it's still "New Chat"
       const session = sessions.find(s => s.id === currentSessionId);
@@ -247,28 +237,26 @@ export default function FloatingAIChat() {
         });
         const newTitle = titleResponse.text?.trim().replace(/^"|"$/g, '') || userMessage.substring(0, 30);
         
-        await fetch(`/api/chat/sessions/${currentSessionId}`, {
-          method: 'PUT',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ title: newTitle })
+        await updateDoc(doc(db, 'chatSessions', currentSessionId), {
+          title: newTitle,
+          updatedAt: new Date().toISOString()
         });
-        
-        setSessions(prev => prev.map(s => s.id === currentSessionId ? { ...s, title: newTitle } : s));
+      } else {
+        await updateDoc(doc(db, 'chatSessions', currentSessionId), {
+          updatedAt: new Date().toISOString()
+        });
       }
 
     } catch (error) {
       console.error('AI Error:', error);
       if (currentSessionId) {
-        const errorMsg = 'Sorry, I encountered an error. Please try again later.';
-        const errRes = await fetch(`/api/chat/sessions/${currentSessionId}/messages`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ role: 'assistant', content: errorMsg })
+        await addDoc(collection(db, 'chatMessages'), {
+          chatId: currentSessionId,
+          userId: user.uid,
+          role: 'assistant',
+          content: 'Sorry, I encountered an error. Please try again later.',
+          createdAt: new Date().toISOString()
         });
-        if (errRes.ok) {
-          const newErrMsg = await errRes.json();
-          setMessages(prev => [...prev, newErrMsg]);
-        }
       }
     } finally {
       setIsLoading(false);
