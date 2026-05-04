@@ -1,13 +1,14 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/src/contexts/AuthContext';
-import { doc, getDoc } from 'firebase/firestore';
+import { doc, getDoc, collection, addDoc } from 'firebase/firestore';
 import { db } from '@/src/firebase';
 import { AppMetadata } from '@/src/types';
-import { BookOpen, Loader2 } from 'lucide-react';
+import { BookOpen, Loader2, Sparkles } from 'lucide-react';
+import { generateCurriculum } from '@/src/utils/ai';
 
 export default function Onboarding() {
-  const { profile, updateProfile } = useAuth();
+  const { user, profile, updateProfile } = useAuth();
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
   const [metadata, setMetadata] = useState<AppMetadata | null>(null);
@@ -17,6 +18,7 @@ export default function Onboarding() {
     department: profile?.department || '',
     level: profile?.level || ''
   });
+  const [autoGenerate, setAutoGenerate] = useState(true);
 
   useEffect(() => {
     const fetchMetadata = async () => {
@@ -36,6 +38,9 @@ export default function Onboarding() {
     setLoading(true);
     try {
       await updateProfile(formData);
+      if (autoGenerate && user?.uid) {
+        await generateCurriculum(formData.institution, formData.department, formData.level, user.uid);
+      }
       navigate('/dashboard');
     } catch (error) {
       console.error("Failed to update profile", error);
@@ -141,6 +146,21 @@ export default function Onboarding() {
                     <option key={level} value={level}>{level}</option>
                   ))}
                 </select>
+              </div>
+            </div>
+
+            <div>
+              <div className="flex items-center mt-4">
+                <input
+                  id="autoGenerate"
+                  type="checkbox"
+                  checked={autoGenerate}
+                  onChange={(e) => setAutoGenerate(e.target.checked)}
+                  className="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-slate-300 rounded"
+                />
+                <label htmlFor="autoGenerate" className="ml-2 block text-sm text-slate-700 flex items-center">
+                  Auto-generate standard courses for my department using <Sparkles className="h-4 w-4 ml-1 text-indigo-500" /> GradePro AI
+                </label>
               </div>
             </div>
 

@@ -2,7 +2,6 @@ import React, { useRef, useState } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { useData } from '../contexts/DataContext';
 import { calculateCGPA, calculateGPA } from '../utils/gpa';
-import { useReactToPrint } from 'react-to-print';
 import { Printer, Download, BookOpen, GraduationCap, Sparkles, Loader2 } from 'lucide-react';
 import { GradeProLogo } from '../components/GradeProLogo';
 import { GoogleGenAI } from '@google/genai';
@@ -55,14 +54,13 @@ export default function Report() {
     }
   };
 
-  const handlePrint = useReactToPrint({
-    contentRef: componentRef,
-    documentTitle: `${profile?.displayName || 'Student'}_GradePro_Report`,
-  });
+  const handlePrint = () => {
+    window.print();
+  };
 
   return (
     <div className="space-y-8">
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 print:hidden">
         <div>
           <h1 className="text-3xl font-bold text-slate-900">Academic Report</h1>
           <p className="text-slate-600 mt-1">Generate and print your official GradePro report.</p>
@@ -86,8 +84,8 @@ export default function Report() {
         </div>
       </div>
 
-      <div className="bg-white p-8 md:p-12 rounded-2xl shadow-sm border border-slate-200 overflow-x-auto">
-        <div ref={componentRef} className="max-w-4xl mx-auto bg-white p-8">
+      <div className="bg-white p-8 md:p-12 rounded-2xl shadow-sm border border-slate-200 overflow-x-auto print:p-0 print:border-none print:shadow-none print:m-0">
+        <div ref={componentRef} className="max-w-4xl mx-auto bg-white p-8 print:p-0 print:max-w-none">
           {/* Report Header */}
           <div className="flex items-center justify-between border-b-2 border-slate-900 pb-6 mb-8">
             <div className="flex items-center space-x-3">

@@ -17,9 +17,12 @@ export const googleProvider = new GoogleAuthProvider();
 async function testConnection() {
   try {
     await getDocFromServer(doc(db, 'test', 'connection'));
-  } catch (error) {
-    if(error instanceof Error && error.message.includes('the client is offline')) {
-      console.error("Please check your Firebase configuration. ");
+  } catch (error: any) {
+    // Only log if it's explicitly an unauthenticated or permission-denied error, 
+    // which indicates configuration exists but requires rules. 
+    // Ignore 'unavailable' which implies offline or sandbox connection issues.
+    if(error.code !== 'unavailable' && error.message && error.message.includes('offline')) {
+      console.warn("Firebase client is offline. Some features may be unavailable.");
     }
   }
 }

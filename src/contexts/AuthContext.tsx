@@ -27,11 +27,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
       if (firebaseUser) {
         const userData: User = {
-          id: firebaseUser.uid,
           uid: firebaseUser.uid,
           email: firebaseUser.email || '',
+          verified_email: firebaseUser.emailVerified || false,
           name: firebaseUser.displayName || '',
+          given_name: '',
+          family_name: '',
           picture: firebaseUser.photoURL || '',
+          locale: 'en',
         };
         setUser(userData);
         await fetchProfile(userData);
@@ -88,7 +91,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       const provider = new GoogleAuthProvider();
       await signInWithPopup(auth, provider);
     } catch (error: any) {
-      console.error('Login error:', error);
+      if (error.code === 'auth/popup-closed-by-user' || error.code === 'auth/cancelled-popup-request') {
+        console.log('Login popup closed by user');
+      } else {
+        console.error('Login error:', error);
+      }
     } finally {
       setIsLoggingIn(false);
     }

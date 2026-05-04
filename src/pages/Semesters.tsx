@@ -1,12 +1,16 @@
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useData } from '../contexts/DataContext';
+import { useAuth } from '../contexts/AuthContext';
 import { calculateCGPA } from '../utils/gpa';
-import { Plus, Trash2, ChevronRight, BookOpen } from 'lucide-react';
+import { generateCurriculum } from '../utils/ai';
+import { Plus, Trash2, ChevronRight, BookOpen, Sparkles, Loader2 as LoaderIcon } from 'lucide-react';
 
 export default function Semesters() {
+  const { user, profile } = useAuth();
   const { semesters, courses, addSemester, deleteSemester } = useData();
   const [isAdding, setIsAdding] = useState(false);
+  const [isGenerating, setIsGenerating] = useState(false);
   const [level, setLevel] = useState('100L');
   const [name, setName] = useState('First Semester');
 
@@ -16,6 +20,26 @@ export default function Semesters() {
     setIsAdding(false);
     setLevel('100L');
     setName('First Semester');
+  };
+
+  const handleAutoGenerate = async () => {
+    if (!profile || !user) return;
+    
+    setIsGenerating(true);
+    try {
+      await generateCurriculum(
+        profile.institution || 'University',
+        profile.department || 'Department',
+        level,
+        user.uid
+      );
+      setIsAdding(false);
+    } catch (error) {
+      console.error('Error auto-generating curriculum:', error);
+      alert('Failed to generate. Please try again.');
+    } finally {
+      setIsGenerating(false);
+    }
   };
 
   return (
@@ -66,12 +90,28 @@ export default function Semesters() {
                 type="button"
                 onClick={() => setIsAdding(false)}
                 className="flex-1 px-4 py-2 bg-slate-100 text-slate-700 font-medium rounded-xl hover:bg-slate-200 transition-colors"
+                disabled={isGenerating}
               >
                 Cancel
               </button>
               <button
+                type="button"
+                onClick={handleAutoGenerate}
+                disabled={isGenerating || !profile?.department}
+                className="flex-1 px-4 py-2 bg-slate-50 text-indigo-600 font-medium rounded-xl hover:bg-slate-100 border border-indigo-200 transition-colors shadow-sm disabled:opacity-50 flex items-center justify-center min-w-[140px]"
+                title={!profile?.department ? 'Please set your department in profile first' : ''}
+              >
+                {isGenerating ? (
+                  <LoaderIcon className="h-4 w-4 mr-2 animate-spin" />
+                ) : (
+                  <Sparkles className="h-4 w-4 mr-2" />
+                )}
+                AI Generate
+              </button>
+              <button
                 type="submit"
-                className="flex-1 px-4 py-2 bg-indigo-600 text-white font-medium rounded-xl hover:bg-indigo-700 transition-colors"
+                disabled={isGenerating}
+                className="flex-1 px-4 py-2 bg-indigo-600 text-white font-medium rounded-xl hover:bg-indigo-700 transition-colors disabled:opacity-50"
               >
                 Save
               </button>

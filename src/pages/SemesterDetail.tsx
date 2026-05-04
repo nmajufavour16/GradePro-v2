@@ -6,12 +6,13 @@ import { doc, getDoc } from 'firebase/firestore';
 import { db } from '../firebase';
 import { AppMetadata } from '../types';
 import { calculateGPA, getGradePoint } from '../utils/gpa';
-import { ArrowLeft, Plus, Trash2, Edit2, Check, X } from 'lucide-react';
+import { ArrowLeft, Plus, Trash2, Edit2, Check, X, Sparkles, Loader2 as LoaderIcon } from 'lucide-react';
+import { generateCoursesForSemester } from '../utils/ai';
 
 export default function SemesterDetail() {
   const { id } = useParams<{ id: string }>();
   const { semesters, courses, addCourse, updateCourse, deleteCourse } = useData();
-  const { profile } = useAuth();
+  const { user, profile } = useAuth();
   const [metadata, setMetadata] = useState<AppMetadata | null>(null);
   
   const semester = semesters.find(s => s.id === id);
@@ -20,6 +21,7 @@ export default function SemesterDetail() {
   const totalUnits = semesterCourses.reduce((acc, c) => acc + c.units, 0);
 
   const [isAdding, setIsAdding] = useState(false);
+  const [isGenerating, setIsGenerating] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
 
   const [formData, setFormData] = useState({
@@ -117,6 +119,31 @@ export default function SemesterDetail() {
     setIsAdding(true);
   };
 
+  const handleAutoGenerate = async () => {
+    if (!profile || !user || !semester) return;
+    
+    if (semesterCourses.length > 0) {
+      if (!confirm('This will add standard courses to your existing ones. Continue?')) return;
+    }
+
+    setIsGenerating(true);
+    try {
+      await generateCoursesForSemester(
+        profile.institution || 'University',
+        profile.department || 'Department',
+        semester.level,
+        semester.name,
+        user.uid,
+        semester.id
+      );
+    } catch (error) {
+      console.error('Error auto-generating courses:', error);
+      alert('Failed to generate courses. Please try again.');
+    } finally {
+      setIsGenerating(false);
+    }
+  };
+
   return (
     <div className="space-y-8">
       <div className="flex items-center space-x-4 mb-6">
@@ -136,15 +163,30 @@ export default function SemesterDetail() {
 
       <div className="flex justify-between items-center bg-white p-4 rounded-2xl shadow-sm border border-slate-200">
         <h2 className="text-xl font-bold text-slate-900">Courses</h2>
-        {!isAdding && (
+        <div className="flex items-center space-x-3">
           <button
-            onClick={() => setIsAdding(true)}
-            className="flex items-center px-4 py-2 bg-indigo-600 text-white font-medium rounded-xl hover:bg-indigo-700 transition-colors shadow-sm"
+            onClick={handleAutoGenerate}
+            disabled={isGenerating || !profile?.department}
+            className="flex items-center px-4 py-2 bg-slate-50 text-indigo-600 font-medium rounded-xl hover:bg-slate-100 border border-indigo-200 transition-colors shadow-sm disabled:opacity-50"
+            title={!profile?.department ? 'Please set your department in profile first' : ''}
           >
-            <Plus className="h-5 w-5 mr-2" />
-            Add Course
+            {isGenerating ? (
+              <LoaderIcon className="h-4 w-4 mr-2 animate-spin" />
+            ) : (
+              <Sparkles className="h-4 w-4 mr-2" />
+            )}
+            AI Generate
           </button>
-        )}
+          {!isAdding && (
+            <button
+              onClick={() => setIsAdding(true)}
+              className="flex items-center px-4 py-2 bg-indigo-600 text-white font-medium rounded-xl hover:bg-indigo-700 transition-colors shadow-sm"
+            >
+              <Plus className="h-5 w-5 mr-2" />
+              Add Course
+            </button>
+          )}
+        </div>
       </div>
 
       {isAdding && (

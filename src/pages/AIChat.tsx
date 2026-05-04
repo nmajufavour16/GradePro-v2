@@ -6,10 +6,9 @@ import { useData } from '@/src/contexts/DataContext';
 import { calculateCGPA } from '@/src/utils/gpa';
 import { GoogleGenAI, ThinkingLevel } from '@google/genai';
 import ReactMarkdown from 'react-markdown';
-import { MessageCircle, Send, Loader2, Sparkles, Plus, Trash2, History, X, Menu, ChevronLeft, ChevronRight, Mic, Square, Image as ImageIcon, Brain } from 'lucide-react';
+import { MessageCircle, Send, Loader2, Sparkles, Plus, Trash2, History, X, Menu, ChevronLeft, ChevronRight, Image as ImageIcon, Brain } from 'lucide-react';
 import { ChatSession, ChatMessage } from '@/src/types';
 import { motion, AnimatePresence } from 'motion/react';
-import { useAudioRecorder } from '../hooks/useAudioRecorder';
 
 export default function AIChat() {
   const { user, profile } = useAuth();
@@ -24,10 +23,6 @@ export default function AIChat() {
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
   const [isHighThinking, setIsHighThinking] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
-  
-  const { isRecording, isTranscribing, startRecording, stopRecording } = useAudioRecorder((text) => {
-    setInput(prev => prev + (prev ? ' ' : '') + text);
-  });
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
@@ -163,15 +158,18 @@ export default function AIChat() {
       }
 
       // Save user message to DB
-      await addDoc(collection(db, 'chatMessages'), {
+      const messageData: any = {
         chatId: currentSessionId,
         userId: user.uid,
         role: 'user',
         content: userMessage || (currentImage ? 'Analyzed an image' : ''),
-        imageUrl: currentImage || undefined,
         isThinking: currentThinking,
         createdAt: new Date().toISOString()
-      });
+      };
+      if (currentImage) {
+        messageData.imageUrl = currentImage;
+      }
+      await addDoc(collection(db, 'chatMessages'), messageData);
 
       // Prepare history for Gemini
       const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
@@ -452,14 +450,6 @@ export default function AIChat() {
               </div>
             </div>
           )}
-          {isTranscribing && (
-            <div className="flex justify-start">
-              <div className="bg-slate-50 p-4 rounded-2xl rounded-tl-none border border-slate-100 flex items-center space-x-2">
-                <Loader2 className="h-4 w-4 text-indigo-600 animate-spin" />
-                <span className="text-sm text-slate-500">Transcribing audio...</span>
-              </div>
-            </div>
-          )}
           <div ref={messagesEndRef} />
         </div>
 
@@ -525,31 +515,13 @@ export default function AIChat() {
                 value={input}
                 onChange={(e) => setInput(e.target.value)}
                 onKeyDown={(e) => e.key === 'Enter' && handleSend()}
-                placeholder={isRecording ? "Recording..." : "Message GradePro AI..."}
-                disabled={isRecording || isTranscribing}
+                placeholder="Message GradePro AI..."
+                disabled={isLoading}
                 className="flex-1 px-4 py-3 bg-slate-50 border border-slate-200 focus:bg-white focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 rounded-xl text-sm transition-all outline-none disabled:opacity-50"
               />
-              {isRecording ? (
-                <button
-                  onClick={stopRecording}
-                  className="p-3 bg-red-500 text-white rounded-xl hover:bg-red-600 transition-colors animate-pulse"
-                  title="Stop Recording"
-                >
-                  <Square className="h-5 w-5" />
-                </button>
-              ) : (
-                <button
-                  onClick={startRecording}
-                  disabled={isLoading || isTranscribing}
-                  className="p-3 bg-slate-100 text-slate-600 rounded-xl hover:bg-slate-200 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-                  title="Voice Message"
-                >
-                  <Mic className="h-5 w-5" />
-                </button>
-              )}
               <button
                 onClick={handleSend}
-                disabled={(!input.trim() && !selectedImage) || isLoading || isTranscribing || isRecording}
+                disabled={(!input.trim() && !selectedImage) || isLoading}
                 className="p-3 bg-indigo-600 text-white rounded-xl hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
               >
                 <Send className="h-5 w-5" />
