@@ -52,7 +52,7 @@ export default function AIAssistant() {
       `;
 
       chatRef.current = ai.chats.create({
-        model: 'gemini-3.1-flash',
+        model: 'gemini-3-flash-preview',
         config: {
           systemInstruction: context,
         }

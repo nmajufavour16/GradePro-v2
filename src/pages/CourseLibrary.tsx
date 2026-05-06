@@ -96,7 +96,7 @@ export default function CourseLibrary() {
         Use clear headings and professional yet encouraging tone. Use markdown.
       `;
       const result = await ai.models.generateContent({
-        model: 'gemini-3.1-pro',
+        model: 'gemini-3.1-pro-preview',
         contents: [{ role: 'user', parts: [{ text: prompt }] }],
       });
       setAiTips(result.text || '');
@@ -184,7 +184,7 @@ export default function CourseLibrary() {
   // Unique by code, prioritizing community ones for same code if they have IDs
   const uniqueCoursesMap = new Map();
   allCourses.forEach(c => {
-    if (!uniqueCoursesMap.has(c.code) || c.id) {
+    if (!uniqueCoursesMap.has(c.code) || (c as any).id) {
       uniqueCoursesMap.set(c.code, c);
     }
   });

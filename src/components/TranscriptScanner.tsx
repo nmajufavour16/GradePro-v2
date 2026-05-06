@@ -13,7 +13,7 @@ interface TranscriptScannerProps {
 }
 
 export default function TranscriptScanner({ onClose }: TranscriptScannerProps) {
-  const { user } = useAuth();
+  const { user, profile } = useAuth();
   const { semesters, courses } = useData();
   const [file, setFile] = useState<File | null>(null);
   const [isScanning, setIsScanning] = useState(false);

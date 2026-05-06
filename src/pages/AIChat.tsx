@@ -131,7 +131,35 @@ export default function AIChat() {
       }
       const reader = new FileReader();
       reader.onloadend = () => {
-        setSelectedImage(reader.result as string);
+        const img = new Image();
+        img.onload = () => {
+          const canvas = document.createElement('canvas');
+          let width = img.width;
+          let height = img.height;
+          const MAX_SIZE = 800; // Resize to max 800px to keep base64 size around 100-200kb
+
+          if (width > height) {
+            if (width > MAX_SIZE) {
+              height *= MAX_SIZE / width;
+              width = MAX_SIZE;
+            }
+          } else {
+            if (height > MAX_SIZE) {
+              width *= MAX_SIZE / height;
+              height = MAX_SIZE;
+            }
+          }
+
+          canvas.width = width;
+          canvas.height = height;
+          const ctx = canvas.getContext('2d');
+          ctx?.drawImage(img, 0, 0, width, height);
+          
+          // Use JPEG with 0.7 quality to ensure small file size
+          const resizedBase64 = canvas.toDataURL('image/jpeg', 0.7);
+          setSelectedImage(resizedBase64);
+        };
+        img.src = reader.result as string;
       };
       reader.readAsDataURL(file);
     }
@@ -228,7 +256,7 @@ export default function AIChat() {
       });
 
       // Select model based on input
-      const modelName = (currentImage || currentThinking) ? 'gemini-3.1-pro' : 'gemini-3.1-flash';
+      const modelName = (currentImage || currentThinking) ? 'gemini-3.1-pro-preview' : 'gemini-3-flash-preview';
       const config: any = {
         systemInstruction: context,
         maxOutputTokens: 4096,
@@ -260,7 +288,7 @@ export default function AIChat() {
       const session = sessions.find(s => s.id === currentSessionId);
       if (session && (session.title === 'New Chat' || messages.length === 0)) {
         const titleResponse = await ai.models.generateContent({
-          model: 'gemini-3.1-flash',
+          model: 'gemini-3-flash-preview',
           contents: [{ role: 'user', parts: [{ text: `Generate a very short, 3-5 word title for a chat that starts with this: "${userMessage || 'Image Analysis'}". Output ONLY the title.` }] }]
         });
         const newTitle = titleResponse.text?.trim().replace(/^"|"$/g, '') || (userMessage ? userMessage.substring(0, 30) : 'Image Analysis');

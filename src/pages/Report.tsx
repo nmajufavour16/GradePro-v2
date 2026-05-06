@@ -44,7 +44,7 @@ export default function Report() {
       `;
 
       const result = await ai.models.generateContent({
-        model: 'gemini-3.1-flash',
+        model: 'gemini-3-flash-preview',
         contents: [{ role: 'user', parts: [{ text: prompt }] }],
       });
       setAiInsights(result.text || '');
