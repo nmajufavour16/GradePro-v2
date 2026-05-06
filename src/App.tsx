@@ -10,6 +10,7 @@ import SemesterDetail from '@/src/pages/SemesterDetail';
 import Report from '@/src/pages/Report';
 import Onboarding from '@/src/pages/Onboarding';
 import AIChat from '@/src/pages/AIChat';
+import Settings from '@/src/pages/Settings';
 import AdminDashboard from '@/src/pages/AdminDashboard';
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
@@ -55,6 +56,7 @@ export default function App() {
               <Route path="/semesters/:id" element={<SemesterDetail />} />
               <Route path="/report" element={<Report />} />
               <Route path="/ai-chat" element={<AIChat />} />
+              <Route path="/settings" element={<Settings />} />
               <Route path="/admin" element={<AdminDashboard />} />
             </Route>
             <Route path="*" element={<Navigate to="/" replace />} />

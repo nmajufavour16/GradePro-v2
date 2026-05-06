@@ -1,8 +1,9 @@
 import React, { useState } from 'react';
 import { Outlet, Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
-import { BookOpen, LayoutDashboard, LogOut, Menu, X, FileText, Sparkles, ShieldCheck, ChevronLeft, ChevronRight } from 'lucide-react';
+import { BookOpen, LayoutDashboard, LogOut, Menu, X, FileText, Sparkles, ShieldCheck, ChevronLeft, ChevronRight, Settings as SettingsIcon } from 'lucide-react';
 import FloatingAIChat from './FloatingAIChat';
+import UserTour from './UserTour';
 import { GradeProLogo } from './GradeProLogo';
 
 export default function Layout() {
@@ -58,10 +59,14 @@ export default function Layout() {
           <nav className="flex-1 px-4 py-6 space-y-1">
             {navigation.map((item) => {
               const isActive = location.pathname.startsWith(item.href);
+              const tourId = item.name === 'Semesters' ? 'tour-semesters' : 
+                            item.name === 'Dashboard' ? 'tour-dashboard-nav' : 
+                            item.name === 'GradePro AI' ? 'tour-ai-nav' : undefined;
               return (
                 <Link
                   key={item.name}
                   to={item.href}
+                  id={tourId}
                   onClick={() => setIsMobileMenuOpen(false)}
                   title={isCollapsed ? item.name : ''}
                   className={`
@@ -79,7 +84,7 @@ export default function Layout() {
             })}
           </nav>
 
-          <div className="p-4 border-t border-slate-200">
+          <div className="p-4 border-t border-slate-200" id="tour-profile">
             <div className={`flex items-center px-4 py-3 mb-2 ${isCollapsed ? 'justify-center' : ''}`}>
               <img 
                 src={profile?.photoURL || `https://ui-avatars.com/api/?name=${profile?.displayName || 'User'}&background=random`} 
@@ -94,6 +99,14 @@ export default function Layout() {
                 </div>
               )}
             </div>
+            <Link
+              to="/settings"
+              id="tour-settings-nav"
+              className={`flex w-full items-center px-4 py-2 mb-1 text-sm font-medium text-slate-600 rounded-xl hover:bg-slate-50 hover:text-slate-900 transition-colors ${isCollapsed ? 'justify-center' : ''}`}
+            >
+              <SettingsIcon className={`h-5 w-5 text-slate-400 shrink-0 ${isCollapsed ? '' : 'mr-3'}`} />
+              {!isCollapsed && <span>Settings</span>}
+            </Link>
             <button
               onClick={handleLogout}
               title={isCollapsed ? 'Sign out' : ''}
@@ -114,6 +127,7 @@ export default function Layout() {
       </main>
       <div className="print:hidden">
         <FloatingAIChat />
+        <UserTour />
       </div>
     </div>
   );

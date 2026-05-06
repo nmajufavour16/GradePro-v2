@@ -38,7 +38,7 @@ export default function Dashboard() {
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 flex flex-col">
+        <div id="tour-cgpa" className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 flex flex-col">
           <div className="flex items-center justify-between mb-4">
             <h3 className="text-sm font-medium text-slate-500 uppercase tracking-wider">Current CGPA</h3>
             <div className="p-2 bg-indigo-50 rounded-lg">
@@ -49,7 +49,7 @@ export default function Dashboard() {
           <p className="text-sm text-slate-500 mt-2">Out of {profile?.gradingScale || 5.0}</p>
         </div>
 
-        <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 flex flex-col">
+        <div id="tour-target" className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 flex flex-col">
           <div className="flex items-center justify-between mb-4">
             <h3 className="text-sm font-medium text-slate-500 uppercase tracking-wider">Target CGPA</h3>
             <div className="p-2 bg-emerald-50 rounded-lg">
@@ -110,7 +110,7 @@ export default function Dashboard() {
       </div>
 
       {semesters.length > 0 && (
-        <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
+        <div id="tour-trend" className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
           <h3 className="text-lg font-bold text-slate-900 mb-6">GPA Trend</h3>
           <div className="h-72 w-full relative">
             <ResponsiveContainer width="100%" height="100%" minWidth={0}>

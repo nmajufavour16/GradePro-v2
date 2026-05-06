@@ -21,6 +21,7 @@ export interface UserProfile {
   department?: string;
   level?: string;
   role?: 'admin' | 'user';
+  hasCompletedTour?: boolean;
   createdAt?: string;
 }
 

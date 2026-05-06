@@ -445,6 +445,7 @@ export default function FloatingAIChat() {
       </AnimatePresence>
 
       <motion.button
+        id="tour-ai-button"
         whileHover={{ scale: 1.05 }}
         whileTap={{ scale: 0.95 }}
         onClick={() => setIsOpen(!isOpen)}
