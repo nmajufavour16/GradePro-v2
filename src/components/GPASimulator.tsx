@@ -106,7 +106,7 @@ export default function GPASimulator({ currentCourses, profile, onClose }: GPASi
                 <div>
                   <p className="text-xs text-slate-400 mb-1">Projected Semester GPA</p>
                   <div className="flex items-baseline space-x-2">
-                    <span className="text-4xl font-black text-white">{simulatedGPA.toFixed(2)}</span>
+                    <span className="text-4xl font-bold text-white">{simulatedGPA.toFixed(2)}</span>
                     <span className={`text-sm font-bold px-2 py-0.5 rounded-full ${diff >= 0 ? 'bg-emerald-500/20 text-emerald-400' : 'bg-red-500/20 text-red-400'}`}>
                       {diff >= 0 ? '+' : ''}{diff.toFixed(2)}
                     </span>

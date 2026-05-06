@@ -286,48 +286,59 @@ export default function AIChat() {
   };
 
   return (
-    <div className="h-[calc(100vh-8rem)] flex flex-col md:flex-row bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden relative">
+    <div className="h-full min-h-[calc(100vh-4rem)] md:min-h-screen flex flex-col md:flex-row bg-white relative">
       {/* Sidebar - Chat History */}
       <div className={`
-        fixed inset-0 z-40 bg-slate-900/50 backdrop-blur-sm transition-opacity md:hidden
+        fixed inset-0 z-40 bg-slate-900/20 backdrop-blur-sm transition-opacity md:hidden
         ${isSidebarOpen ? 'opacity-100' : 'opacity-0 pointer-events-none'}
       `} onClick={() => setIsSidebarOpen(false)} />
 
       <div className={`
-        absolute inset-y-0 left-0 z-50 bg-slate-50 border-r border-slate-200 transform transition-all duration-300 ease-in-out md:relative md:translate-x-0
+        absolute inset-y-0 left-0 z-50 bg-white border-r border-slate-100 transform transition-all duration-300 ease-in-out md:relative md:translate-x-0
         ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full'}
-        ${isSidebarCollapsed ? 'md:w-20' : 'md:w-64 w-64'}
+        ${isSidebarCollapsed ? 'md:w-16' : 'md:w-64 w-64'}
       `}>
         <div className="h-full flex flex-col relative">
           {/* Collapse Toggle Button (Desktop) */}
           <button
             onClick={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
-            className="hidden md:flex absolute -right-3 top-10 bg-white border border-slate-200 rounded-full p-1 text-slate-400 hover:text-indigo-600 hover:border-indigo-200 shadow-sm z-10"
+            className="hidden md:flex absolute -right-3 top-1/2 -translate-y-1/2 bg-white border border-slate-200 rounded-full p-1 text-slate-400 hover:text-slate-800 shadow-sm z-10 hover:scale-110 transition-transform"
           >
-            {isSidebarCollapsed ? <ChevronRight className="h-4 w-4" /> : <ChevronLeft className="h-4 w-4" />}
+            {isSidebarCollapsed ? <ChevronRight className="h-3 w-3" /> : <ChevronLeft className="h-3 w-3" />}
           </button>
 
-          <div className={`p-4 border-b border-slate-200 flex items-center bg-white ${isSidebarCollapsed ? 'justify-center' : 'justify-between'}`}>
-            {!isSidebarCollapsed && <h3 className="font-bold text-slate-800">Chat History</h3>}
-            {isSidebarCollapsed && <History className="h-5 w-5 text-slate-400" />}
+          <div className={`p-4 flex items-center ${isSidebarCollapsed ? 'justify-center' : 'justify-between'}`}>
+            {!isSidebarCollapsed && <h3 className="font-semibold text-slate-800 text-sm tracking-wide">Recent</h3>}
             <button onClick={() => setIsSidebarOpen(false)} className="md:hidden p-1 text-slate-400 hover:text-slate-600">
-              <X className="h-5 w-5" />
+              <X className="h-4 w-4" />
             </button>
+            {!isSidebarCollapsed && (
+              <button 
+                onClick={() => {
+                  createNewSession();
+                  setIsSidebarOpen(false);
+                }}
+                className="text-slate-400 hover:text-indigo-600 transition-colors"
+                title="New Chat"
+              >
+                <Plus className="h-5 w-5" />
+              </button>
+            )}
+            {isSidebarCollapsed && (
+              <button 
+                onClick={() => {
+                  createNewSession();
+                  setIsSidebarOpen(false);
+                }}
+                className="text-slate-400 hover:text-indigo-600 transition-colors mt-2"
+                title="New Chat"
+              >
+                <Plus className="h-5 w-5" />
+              </button>
+            )}
           </div>
-          <div className="p-4 border-b border-slate-200">
-            <button
-              onClick={() => {
-                createNewSession();
-                setIsSidebarOpen(false);
-              }}
-              title={isSidebarCollapsed ? 'New Chat' : ''}
-              className={`w-full flex items-center justify-center space-x-2 bg-indigo-600 text-white px-4 py-2 rounded-xl hover:bg-indigo-700 transition-colors ${isSidebarCollapsed ? 'p-2' : ''}`}
-            >
-              <Plus className="h-4 w-4" />
-              {!isSidebarCollapsed && <span>New Chat</span>}
-            </button>
-          </div>
-          <div className="flex-1 overflow-y-auto p-2 space-y-1">
+          
+          <div className="flex-1 overflow-y-auto px-2 space-y-0.5 mt-2">
             {sessions.map(session => (
               <div key={session.id} className="relative group">
                 <button
@@ -336,30 +347,25 @@ export default function AIChat() {
                     setIsSidebarOpen(false);
                   }}
                   title={isSidebarCollapsed ? session.title : ''}
-                  className={`w-full text-left px-3 py-3 rounded-xl text-sm transition-colors flex items-center space-x-3 pr-10
-                    ${isSidebarCollapsed ? 'justify-center pr-3' : ''}
-                    ${activeSessionId === session.id ? 'bg-indigo-100 text-indigo-900 font-medium' : 'text-slate-600 hover:bg-slate-200'}
+                  className={`w-full text-left px-3 py-2.5 rounded-lg text-sm transition-all flex items-center pr-8
+                    ${isSidebarCollapsed ? 'justify-center pr-3' : 'space-x-3'}
+                    ${activeSessionId === session.id ? 'bg-slate-100 text-slate-900 font-medium' : 'text-slate-500 hover:bg-slate-50 hover:text-slate-700'}
                   `}
                 >
-                  <MessageCircle className="h-4 w-4 shrink-0" />
+                  <MessageCircle className={`h-4 w-4 shrink-0 transition-colors ${activeSessionId === session.id ? 'text-indigo-500' : 'text-slate-400'}`} />
                   {!isSidebarCollapsed && <span className="truncate">{session.title}</span>}
                 </button>
                 {!isSidebarCollapsed && (
                   <button
                     onClick={(e) => deleteSession(e, session.id)}
-                    className="absolute right-2 top-1/2 -translate-y-1/2 p-1.5 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-lg opacity-0 group-hover:opacity-100 transition-all"
+                    className="absolute right-2 top-1/2 -translate-y-1/2 p-1 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded opacity-0 group-hover:opacity-100 transition-all"
                     title="Delete Chat"
                   >
-                    <Trash2 className="h-4 w-4" />
+                    <Trash2 className="h-3.5 w-3.5" />
                   </button>
                 )}
               </div>
             ))}
-            {sessions.length === 0 && !isSidebarCollapsed && (
-              <div className="text-center text-slate-500 text-sm p-4">
-                No chat history yet.
-              </div>
-            )}
           </div>
         </div>
       </div>
@@ -367,165 +373,183 @@ export default function AIChat() {
       {/* Main Chat Area */}
       <div className="flex-1 flex flex-col h-full relative">
         {/* Header */}
-        <div className="p-4 border-b border-slate-200 bg-white flex items-center justify-between">
-          <div className="flex items-center space-x-2">
+        <div className="pt-6 pb-2 px-6 lg:px-12 flex items-center justify-between">
+          <div className="flex items-center space-x-3">
             <button 
               onClick={() => setIsSidebarOpen(true)}
-              className="md:hidden p-1 text-slate-400 hover:text-slate-600 mr-2"
+              className="md:hidden p-2 -ml-2 text-slate-400 hover:text-slate-800 transition-colors rounded-lg hover:bg-slate-50"
             >
               <Menu className="h-5 w-5" />
             </button>
-            <Sparkles className="h-5 w-5 text-indigo-600" />
-            <h2 className="font-semibold text-slate-800">GradePro AI</h2>
+            <h2 className="font-medium text-slate-800 tracking-tight text-lg flex items-center gap-2">
+              <Sparkles className="h-4 w-4 text-indigo-500" />
+              GradePro AI
+            </h2>
           </div>
-          <div className="flex items-center space-x-4">
+          <div className="flex items-center space-x-2">
             <button 
               onClick={() => {
                 createNewSession();
                 setIsSidebarOpen(false);
               }}
-              className="flex items-center space-x-2 text-indigo-600 hover:text-indigo-700 transition-colors text-sm font-medium"
+              className="p-2 text-slate-400 hover:bg-slate-50 hover:text-indigo-600 transition-all rounded-lg"
+              title="New Chat"
             >
-              <Plus className="h-4 w-4" />
-              <span>New Chat</span>
-            </button>
-            <button 
-              onClick={() => setIsSidebarOpen(!isSidebarOpen)}
-              className="hidden md:flex items-center space-x-2 text-slate-500 hover:text-indigo-600 transition-colors text-sm font-medium"
-            >
-              <History className="h-4 w-4" />
-              <span>{isSidebarOpen ? 'Hide History' : 'Show History'}</span>
+              <Plus className="h-5 w-5" />
             </button>
           </div>
         </div>
 
         {/* Messages */}
-        <div className="flex-1 overflow-y-auto p-4 space-y-6 bg-white">
-          {messages.length === 0 && !isLoading ? (
-            <div className="h-full flex flex-col items-center justify-center text-center space-y-4">
-              <div className="h-16 w-16 bg-indigo-50 rounded-full flex items-center justify-center">
-                <Sparkles className="h-8 w-8 text-indigo-600" />
-              </div>
-              <div>
-                <h3 className="text-lg font-medium text-slate-900">How can I help you today?</h3>
-                <p className="text-slate-500 mt-1 max-w-sm">Ask me about your courses, study plans, or any academic topics you need help with.</p>
-              </div>
-            </div>
-          ) : (
-            messages.map((msg) => (
-              <div key={msg.id} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
-                <div className={`
-                  max-w-[85%] p-4 rounded-2xl text-sm
-                  ${msg.role === 'user' 
-                    ? 'bg-indigo-600 text-white rounded-tr-none' 
-                    : 'bg-slate-50 text-slate-800 border border-slate-100 rounded-tl-none'}
-                `}>
-                  {msg.imageUrl && (
-                    <div className="mb-3 rounded-lg overflow-hidden border border-slate-200 bg-white">
-                      <img src={msg.imageUrl} alt="Uploaded content" className="max-h-64 w-auto object-contain" referrerPolicy="no-referrer" />
-                    </div>
-                  )}
-                  {msg.role === 'assistant' ? (
-                    <div className="prose prose-sm max-w-none prose-indigo">
-                      <ReactMarkdown>{msg.content}</ReactMarkdown>
-                    </div>
-                  ) : (
-                    <div className="flex flex-col gap-1">
-                      {msg.content}
-                      {msg.isThinking && (
-                        <span className="text-[10px] opacity-70 flex items-center gap-1">
-                          <Brain className="h-3 w-3" /> High Thinking Mode
-                        </span>
-                      )}
-                    </div>
-                  )}
+        <div className="flex-1 overflow-y-auto px-4 lg:px-12 pb-32">
+          <div className="max-w-3xl mx-auto space-y-8 pt-4">
+            {messages.length === 0 && !isLoading ? (
+              <div className="h-[60vh] flex flex-col items-center justify-center text-center space-y-6">
+                <div className="h-20 w-20 bg-gradient-to-br from-indigo-50 to-white border border-indigo-100 rounded-2xl flex items-center justify-center shadow-sm">
+                  <Sparkles className="h-10 w-10 text-indigo-500" />
+                </div>
+                <div className="space-y-2">
+                  <h3 className="text-2xl font-medium text-slate-800 tracking-tight">How can I help you?</h3>
+                  <p className="text-slate-500 text-sm max-w-[260px] mx-auto leading-relaxed">I'm ready to assist with assignments, study plans, or any academic topics.</p>
                 </div>
               </div>
-            ))
-          )}
-          {isLoading && (
-            <div className="flex justify-start">
-              <div className="bg-slate-50 p-4 rounded-2xl rounded-tl-none border border-slate-100">
-                <Loader2 className="h-5 w-5 text-indigo-600 animate-spin" />
+            ) : (
+              messages.map((msg) => (
+                <div key={msg.id} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
+                  {msg.role === 'assistant' && (
+                    <div className="h-8 w-8 rounded-full bg-indigo-50 border border-indigo-100 flex items-center justify-center shrink-0 mr-4 mt-1">
+                      <Sparkles className="h-4 w-4 text-indigo-500" />
+                    </div>
+                  )}
+                  <div className={`
+                    max-w-[85%] sm:max-w-[75%] rounded-2xl text-[15px] leading-relaxed
+                    ${msg.role === 'user' 
+                      ? 'bg-slate-100 text-slate-900 px-5 py-3.5 rounded-tr-sm font-medium' 
+                      : 'text-slate-800'}
+                  `}>
+                    {msg.imageUrl && (
+                      <div className="mb-4 rounded-xl overflow-hidden border border-slate-200 bg-slate-50">
+                        <img src={msg.imageUrl} alt="Uploaded content" className="max-h-64 w-auto object-contain" referrerPolicy="no-referrer" />
+                      </div>
+                    )}
+                    {msg.role === 'assistant' ? (
+                      <div className="prose prose-slate prose-sm sm:prose-base max-w-none 
+                        prose-p:leading-relaxed prose-pre:bg-slate-50 prose-pre:border prose-pre:border-slate-200 prose-pre:text-slate-800 
+                        prose-headings:font-medium prose-a:text-indigo-600 hover:prose-a:text-indigo-500">
+                        <ReactMarkdown>{msg.content}</ReactMarkdown>
+                      </div>
+                    ) : (
+                      <div className="flex flex-col gap-1.5">
+                        {msg.content}
+                        {msg.isThinking && (
+                          <span className="text-[11px] opacity-60 flex items-center gap-1 font-normal tracking-wide uppercase">
+                            <Brain className="h-3 w-3" /> High Thinking
+                          </span>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              ))
+            )}
+            {isLoading && (
+              <div className="flex justify-start items-center">
+                <div className="h-8 w-8 rounded-full bg-indigo-50 border border-indigo-100 flex items-center justify-center shrink-0 mr-4">
+                  <Sparkles className="h-4 w-4 text-indigo-500 opacity-50" />
+                </div>
+                <div className="flex space-x-1.5 pt-2">
+                  <div className="w-1.5 h-1.5 rounded-full bg-slate-300 animate-bounce" style={{ animationDelay: '0ms' }} />
+                  <div className="w-1.5 h-1.5 rounded-full bg-slate-300 animate-bounce" style={{ animationDelay: '150ms' }} />
+                  <div className="w-1.5 h-1.5 rounded-full bg-slate-300 animate-bounce" style={{ animationDelay: '300ms' }} />
+                </div>
               </div>
-            </div>
-          )}
-          <div ref={messagesEndRef} />
+            )}
+            <div ref={messagesEndRef} className="h-4" />
+          </div>
         </div>
 
-        {/* Selected Image Preview */}
-        <AnimatePresence>
-          {selectedImage && (
-            <motion.div 
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: 10 }}
-              className="px-4 py-2 bg-slate-50 border-t border-slate-200 flex items-center gap-4"
-            >
-              <div className="relative h-16 w-16 rounded-lg overflow-hidden border border-slate-300">
-                <img src={selectedImage} alt="Preview" className="h-full w-full object-cover" referrerPolicy="no-referrer" />
-                <button 
-                  onClick={() => setSelectedImage(null)}
-                  className="absolute top-0 right-0 bg-red-500 text-white p-0.5 rounded-bl-lg"
-                >
-                  <X className="h-3 w-3" />
-                </button>
-              </div>
-              <span className="text-xs text-slate-500">Image selected for analysis</span>
-            </motion.div>
-          )}
-        </AnimatePresence>
-
         {/* Input */}
-        <div className="p-4 bg-white border-t border-slate-200">
-          <div className="flex flex-col gap-3 max-w-4xl mx-auto">
-            <div className="flex items-center justify-between px-1">
-              <div className="flex items-center gap-4">
-                <button
-                  onClick={() => setIsHighThinking(!isHighThinking)}
-                  className={`flex items-center gap-2 px-3 py-1 rounded-full text-xs font-medium transition-all ${
-                    isHighThinking 
-                      ? 'bg-indigo-100 text-indigo-700 border border-indigo-200' 
-                      : 'bg-slate-100 text-slate-600 border border-transparent hover:bg-slate-200'
-                  }`}
+        <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-white via-white/95 to-transparent pt-10 pb-6 px-4">
+          <div className="max-w-3xl mx-auto">
+            {/* Selected Image Preview attached right above the input */}
+            <AnimatePresence>
+              {selectedImage && (
+                <motion.div 
+                  initial={{ opacity: 0, y: 10, scale: 0.95 }}
+                  animate={{ opacity: 1, y: 0, scale: 1 }}
+                  exit={{ opacity: 0, y: 10, scale: 0.95 }}
+                  className="mb-3 flex items-center gap-3 bg-white border border-slate-200 rounded-xl p-2 w-fit shadow-sm"
                 >
-                  <Brain className={`h-3.5 w-3.5 ${isHighThinking ? 'animate-pulse' : ''}`} />
-                  High Thinking
-                </button>
-                <input
-                  type="file"
-                  ref={fileInputRef}
-                  onChange={handleImageSelect}
-                  accept="image/*"
-                  className="hidden"
-                />
-                <button
-                  onClick={() => fileInputRef.current?.click()}
-                  className="flex items-center gap-2 px-3 py-1 rounded-full text-xs font-medium bg-slate-100 text-slate-600 border border-transparent hover:bg-slate-200 transition-all"
-                >
-                  <ImageIcon className="h-3.5 w-3.5" />
-                  Attach Image
-                </button>
-              </div>
-            </div>
+                  <div className="relative h-14 w-14 rounded-md overflow-hidden bg-slate-50">
+                    <img src={selectedImage} alt="Preview" className="h-full w-full object-cover" referrerPolicy="no-referrer" />
+                  </div>
+                  <div className="pr-2">
+                    <p className="text-xs font-medium text-slate-700">Image attached</p>
+                    <button 
+                      onClick={() => setSelectedImage(null)}
+                      className="text-[10px] text-red-500 hover:text-red-700 font-medium uppercase tracking-wider"
+                    >
+                      Remove
+                    </button>
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
 
-            <div className="flex items-center space-x-2">
+            <div className="bg-slate-50 border border-slate-200 rounded-[1.5rem] shadow-sm flex flex-col focus-within:border-indigo-300 focus-within:ring-2 focus-within:ring-indigo-100 focus-within:bg-white transition-all duration-200">
               <input
                 type="text"
                 value={input}
                 onChange={(e) => setInput(e.target.value)}
                 onKeyDown={(e) => e.key === 'Enter' && handleSend()}
-                placeholder="Message GradePro AI..."
+                placeholder="Ask me anything..."
                 disabled={isLoading}
-                className="flex-1 px-4 py-3 bg-slate-50 border border-slate-200 focus:bg-white focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 rounded-xl text-sm transition-all outline-none disabled:opacity-50"
+                className="w-full px-5 py-4 bg-transparent text-slate-800 placeholder-slate-400 outline-none disabled:opacity-50 text-[15px]"
               />
-              <button
-                onClick={handleSend}
-                disabled={(!input.trim() && !selectedImage) || isLoading}
-                className="p-3 bg-indigo-600 text-white rounded-xl hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-              >
-                <Send className="h-5 w-5" />
-              </button>
+              <div className="flex items-center justify-between px-3 pb-3">
+                <div className="flex items-center gap-1">
+                  <input
+                    type="file"
+                    ref={fileInputRef}
+                    onChange={handleImageSelect}
+                    accept="image/*"
+                    className="hidden"
+                  />
+                  <button
+                    onClick={() => fileInputRef.current?.click()}
+                    className="p-2 text-slate-400 hover:text-slate-700 hover:bg-slate-200/50 rounded-full transition-colors"
+                    title="Attach Image"
+                  >
+                    <ImageIcon className="h-5 w-5" strokeWidth={1.5} />
+                  </button>
+                  <button
+                    onClick={() => setIsHighThinking(!isHighThinking)}
+                    className={`p-2 rounded-full transition-colors flex items-center gap-2 ${
+                      isHighThinking 
+                        ? 'text-indigo-600 bg-indigo-50 hover:bg-indigo-100' 
+                        : 'text-slate-400 hover:text-slate-700 hover:bg-slate-200/50'
+                    }`}
+                    title="High Thinking"
+                  >
+                    <Brain className={`h-5 w-5 ${isHighThinking ? 'animate-pulse' : ''}`} strokeWidth={1.5} />
+                  </button>
+                </div>
+
+                <button
+                  onClick={handleSend}
+                  disabled={(!input.trim() && !selectedImage) || isLoading}
+                  className={`p-2 rounded-full transition-all ${
+                    (!input.trim() && !selectedImage) || isLoading
+                      ? 'bg-slate-200 text-slate-400'
+                      : 'bg-indigo-600 text-white hover:bg-indigo-700 shadow-md hover:scale-105 active:scale-95'
+                  }`}
+                >
+                  {isLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4 ml-0.5" />}
+                </button>
+              </div>
+            </div>
+            <div className="text-center mt-3">
+              <p className="text-[11px] text-slate-400">GradePro AI can make mistakes. Consider verifying important information.</p>
             </div>
           </div>
         </div>

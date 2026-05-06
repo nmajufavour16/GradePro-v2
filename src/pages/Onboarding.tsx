@@ -55,7 +55,7 @@ export default function Onboarding() {
         <div className="flex justify-center">
           <BookOpen className="h-12 w-12 text-indigo-600" />
         </div>
-        <h2 className="mt-6 text-center text-3xl font-extrabold text-slate-900">
+        <h2 className="mt-6 text-center text-3xl font-bold text-slate-900">
           Complete your profile
         </h2>
         <p className="mt-2 text-center text-sm text-slate-600">

@@ -6,6 +6,7 @@ import { Printer, Download, BookOpen, GraduationCap, Sparkles, Loader2 } from 'l
 import { GradeProLogo } from '../components/GradeProLogo';
 import { GoogleGenAI } from '@google/genai';
 import ReactMarkdown from 'react-markdown';
+import { useReactToPrint } from 'react-to-print';
 
 export default function Report() {
   const { profile } = useAuth();
@@ -54,9 +55,10 @@ export default function Report() {
     }
   };
 
-  const handlePrint = () => {
-    window.print();
-  };
+  const handlePrint = useReactToPrint({
+    contentRef: componentRef,
+    documentTitle: `${profile?.displayName?.replace(' ', '_') || 'Student'}_Academic_Report`,
+  });
 
   return (
     <div className="space-y-8">
@@ -75,11 +77,11 @@ export default function Report() {
             AI Insights
           </button>
           <button
-            onClick={handlePrint}
-            className="flex items-center justify-center px-6 py-3 bg-indigo-600 text-white font-medium rounded-xl hover:bg-indigo-700 transition-colors shadow-sm"
+            onClick={() => handlePrint()}
+            className="flex items-center justify-center px-6 py-3 bg-indigo-600 text-white font-medium rounded-xl hover:bg-indigo-700 transition-colors shadow-sm min-w-[200px]"
           >
             <Printer className="h-5 w-5 mr-2" />
-            Print / Save as PDF
+            Print / Save PDF
           </button>
         </div>
       </div>
@@ -118,23 +120,23 @@ export default function Report() {
           </div>
 
           {/* Summary Stats */}
-          <div className="flex items-center justify-around bg-slate-50 p-6 rounded-2xl border border-slate-200 mb-12">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-center sm:justify-around bg-slate-50 p-6 rounded-2xl border border-slate-200 mb-12 gap-6 sm:gap-0">
             <div className="text-center">
               <p className="text-sm text-slate-500 uppercase tracking-wider font-semibold mb-2">Cumulative GPA</p>
               <div className="flex items-center justify-center space-x-2">
-                <GraduationCap className="h-8 w-8 text-indigo-600" />
-                <span className="text-4xl font-black text-slate-900">{cgpa.toFixed(2)}</span>
+                <GraduationCap className="h-8 w-8 text-indigo-600 shrink-0" />
+                <span className="text-4xl font-bold text-slate-900 truncate">{cgpa.toFixed(2)}</span>
               </div>
             </div>
-            <div className="w-px h-16 bg-slate-200"></div>
+            <div className="hidden sm:block w-px h-16 bg-slate-200"></div>
             <div className="text-center">
               <p className="text-sm text-slate-500 uppercase tracking-wider font-semibold mb-2">Total Units</p>
-              <span className="text-4xl font-black text-slate-900">{totalUnits}</span>
+              <span className="text-4xl font-bold text-slate-900 truncate">{totalUnits}</span>
             </div>
-            <div className="w-px h-16 bg-slate-200"></div>
+            <div className="hidden sm:block w-px h-16 bg-slate-200"></div>
             <div className="text-center">
               <p className="text-sm text-slate-500 uppercase tracking-wider font-semibold mb-2">Semesters</p>
-              <span className="text-4xl font-black text-slate-900">{semesters.length}</span>
+              <span className="text-4xl font-bold text-slate-900 truncate">{semesters.length}</span>
             </div>
           </div>
 
@@ -153,7 +155,7 @@ export default function Report() {
 
           {/* Semester Breakdown */}
           <div className="space-y-10">
-            <h3 className="text-xl font-black text-slate-900 uppercase tracking-wider border-b border-slate-200 pb-2">Academic Record</h3>
+            <h3 className="text-xl font-bold text-slate-900 uppercase tracking-wider border-b border-slate-200 pb-2">Academic Record</h3>
             
             {semesters.length === 0 ? (
               <p className="text-slate-500 italic">No academic records found.</p>
@@ -165,40 +167,42 @@ export default function Report() {
 
                 return (
                   <div key={semester.id} className="break-inside-avoid">
-                    <div className="flex items-center justify-between bg-slate-100 px-4 py-2 rounded-t-xl border border-slate-200 border-b-0">
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between bg-slate-100 px-4 py-3 sm:py-2 rounded-t-xl border border-slate-200 border-b-0 gap-2 sm:gap-0">
                       <h4 className="font-bold text-slate-900">{semester.level} - {semester.name}</h4>
                       <div className="text-sm font-semibold text-slate-700">
                         GPA: <span className="text-indigo-600">{gpa.toFixed(2)}</span> | Units: {sUnits}
                       </div>
                     </div>
-                    <table className="w-full text-left border-collapse border border-slate-200">
-                      <thead>
-                        <tr className="bg-slate-50 border-b border-slate-200">
-                          <th className="px-4 py-2 text-xs font-semibold text-slate-600 uppercase tracking-wider border-r border-slate-200">Course Code</th>
-                          <th className="px-4 py-2 text-xs font-semibold text-slate-600 uppercase tracking-wider border-r border-slate-200">Title</th>
-                          <th className="px-4 py-2 text-xs font-semibold text-slate-600 uppercase tracking-wider text-center border-r border-slate-200">Units</th>
-                          <th className="px-4 py-2 text-xs font-semibold text-slate-600 uppercase tracking-wider text-center border-r border-slate-200">Grade</th>
-                          <th className="px-4 py-2 text-xs font-semibold text-slate-600 uppercase tracking-wider text-center">Points</th>
-                        </tr>
-                      </thead>
-                      <tbody className="divide-y divide-slate-200">
-                        {semesterCourses.length === 0 ? (
-                          <tr>
-                            <td colSpan={5} className="px-4 py-4 text-center text-sm text-slate-500 italic">No courses recorded.</td>
+                    <div className="overflow-x-auto border border-t-0 border-slate-200 rounded-b-xl">
+                      <table className="w-full text-left border-collapse min-w-[500px]">
+                        <thead>
+                          <tr className="bg-slate-50 border-b border-slate-200">
+                            <th className="px-4 py-2 text-xs font-semibold text-slate-600 uppercase tracking-wider border-r border-slate-200">Course Code</th>
+                            <th className="px-4 py-2 text-xs font-semibold text-slate-600 uppercase tracking-wider border-r border-slate-200">Title</th>
+                            <th className="px-4 py-2 text-xs font-semibold text-slate-600 uppercase tracking-wider text-center border-r border-slate-200">Units</th>
+                            <th className="px-4 py-2 text-xs font-semibold text-slate-600 uppercase tracking-wider text-center border-r border-slate-200">Grade</th>
+                            <th className="px-4 py-2 text-xs font-semibold text-slate-600 uppercase tracking-wider text-center">Points</th>
                           </tr>
-                        ) : (
-                          semesterCourses.map(course => (
-                            <tr key={course.id}>
-                              <td className="px-4 py-2 text-sm font-bold text-slate-900 border-r border-slate-200">{course.code}</td>
-                              <td className="px-4 py-2 text-sm text-700 border-r border-slate-200">{course.title || '-'}</td>
-                              <td className="px-4 py-2 text-sm text-center font-medium text-slate-900 border-r border-slate-200">{course.units}</td>
-                              <td className="px-4 py-2 text-sm text-center font-bold text-slate-900 border-r border-slate-200">{course.grade}</td>
-                              <td className="px-4 py-2 text-sm text-center font-medium text-slate-900">{(course.gradePoint * course.units).toFixed(1)}</td>
+                        </thead>
+                        <tbody className="divide-y divide-slate-200">
+                          {semesterCourses.length === 0 ? (
+                            <tr>
+                              <td colSpan={5} className="px-4 py-4 text-center text-sm text-slate-500 italic border-l border-r border-slate-200 first:border-l-0 last:border-r-0">No courses recorded.</td>
                             </tr>
-                          ))
-                        )}
-                      </tbody>
-                    </table>
+                          ) : (
+                            semesterCourses.map(course => (
+                              <tr key={course.id}>
+                                <td className="px-4 py-2 text-sm font-bold text-slate-900 border-r border-slate-200">{course.code}</td>
+                                <td className="px-4 py-2 text-sm text-slate-700 border-r border-slate-200">{course.title || '-'}</td>
+                                <td className="px-4 py-2 text-sm text-center font-medium text-slate-900 border-r border-slate-200">{course.units}</td>
+                                <td className="px-4 py-2 text-sm text-center font-bold text-slate-900 border-r border-slate-200">{course.grade}</td>
+                                <td className="px-4 py-2 text-sm text-center font-medium text-slate-900">{(course.gradePoint * course.units).toFixed(1)}</td>
+                              </tr>
+                            ))
+                          )}
+                        </tbody>
+                      </table>
+                    </div>
                   </div>
                 );
               })

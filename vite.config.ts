@@ -13,6 +13,9 @@ export default defineConfig(({mode}) => {
       VitePWA({
         registerType: 'autoUpdate',
         includeAssets: ['logo.png', 'logo.svg'],
+        workbox: {
+          maximumFileSizeToCacheInBytes: 5 * 1024 * 1024, // 5MB
+        },
         manifest: {
           name: 'GradePro: CGPA Calculator and AI Study Help',
           short_name: 'GradePro',

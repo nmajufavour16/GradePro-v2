@@ -200,14 +200,14 @@ export default function CourseLibrary() {
       <div className="bg-gradient-to-br from-indigo-600 to-indigo-800 p-8 md:p-12 rounded-[2.5rem] text-white shadow-xl relative overflow-hidden">
         <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-6">
           <div className="max-w-xl">
-            <h1 className="text-4xl font-black mb-4">GradePro Library</h1>
+            <h1 className="text-4xl font-bold mb-4">GradePro Library</h1>
             <p className="text-indigo-100 text-lg">
               The ultimate collaborative hub. Explore courses, read community reviews, and find study materials contributed by your peers.
             </p>
           </div>
           <button 
             onClick={() => setIsAddingCourse(true)}
-            className="flex items-center px-6 py-3 bg-white text-indigo-600 font-black rounded-2xl hover:bg-indigo-50 transition-all shadow-lg hover:scale-105 active:scale-95"
+            className="flex items-center px-6 py-3 bg-white text-indigo-600 font-bold rounded-2xl hover:bg-indigo-50 transition-all shadow-lg hover:scale-105 active:scale-95"
           >
             <PlusCircle className="h-5 w-5 mr-2" />
             Contribute Course
@@ -231,7 +231,7 @@ export default function CourseLibrary() {
           </div>
 
           <div className="bg-white p-6 rounded-3xl border border-slate-200 shadow-sm flex flex-col max-h-[70vh]">
-            <h3 className="font-black text-slate-900 flex items-center mb-4 uppercase tracking-tighter text-sm">
+            <h3 className="font-bold text-slate-900 flex items-center mb-4 uppercase tracking-tighter text-sm">
               <BookOpen className="h-4 w-4 mr-2 text-indigo-600 font-bold" />
               Catalogue
             </h3>
@@ -251,7 +251,7 @@ export default function CourseLibrary() {
                 >
                   <div className="flex justify-between items-start">
                     <div>
-                      <p className="font-black text-lg leading-tight uppercase tracking-tight">{t.code}</p>
+                      <p className="font-bold text-lg leading-tight uppercase tracking-tight">{t.code}</p>
                       <p className={`text-xs mt-1 ${selectedCourse === t.code ? 'text-indigo-100' : 'text-slate-500'}`}>{t.title}</p>
                     </div>
                     <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded ${selectedCourse === t.code ? 'bg-white/20' : 'bg-slate-200 text-slate-600'}`}>{t.units} Units</span>
@@ -281,7 +281,7 @@ export default function CourseLibrary() {
                   <div className="relative z-10">
                     <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
                       <div>
-                        <h2 className="text-4xl font-black text-slate-900 uppercase tracking-tighter">{selectedCourse}</h2>
+                        <h2 className="text-4xl font-bold text-slate-900 uppercase tracking-tighter">{selectedCourse}</h2>
                         <p className="text-slate-500 font-medium text-lg">{uniqueCourses.find(c => c.code === selectedCourse)?.title}</p>
                         
                         {uniqueCourses.find(c => c.code === selectedCourse)?.addedBy === user?.uid && (
@@ -295,7 +295,7 @@ export default function CourseLibrary() {
                                   setIsAddingCourse(true);
                                 }
                               }}
-                              className="flex items-center text-[10px] font-black text-slate-400 hover:text-indigo-600 uppercase tracking-widest transition-colors"
+                              className="flex items-center text-[10px] font-bold text-slate-400 hover:text-indigo-600 uppercase tracking-widest transition-colors"
                             >
                               <Edit2 className="h-3 w-3 mr-1" />
                               Edit Listing
@@ -305,7 +305,7 @@ export default function CourseLibrary() {
                                 const course = communityCourses.find(c => c.code === selectedCourse);
                                 if (course) handleDeleteCourse(course.id);
                               }}
-                              className="flex items-center text-[10px] font-black text-slate-400 hover:text-rose-600 uppercase tracking-widest transition-colors"
+                              className="flex items-center text-[10px] font-bold text-slate-400 hover:text-rose-600 uppercase tracking-widest transition-colors"
                             >
                               <Trash2 className="h-3 w-3 mr-1" />
                               Remove
@@ -317,7 +317,7 @@ export default function CourseLibrary() {
                         <button 
                           onClick={() => generateAITips(selectedCourse)}
                           disabled={isGeneratingTips}
-                          className="flex items-center px-6 py-2.5 bg-indigo-600 text-white font-black rounded-2xl hover:bg-indigo-700 transition-all shadow-md active:scale-95 disabled:opacity-50"
+                          className="flex items-center px-6 py-2.5 bg-indigo-600 text-white font-bold rounded-2xl hover:bg-indigo-700 transition-all shadow-md active:scale-95 disabled:opacity-50"
                         >
                           {isGeneratingTips ? <Sparkles className="h-5 w-5 mr-2 animate-spin" /> : <Sparkles className="h-5 w-5 mr-2" />}
                           AI Study Plan
@@ -333,18 +333,18 @@ export default function CourseLibrary() {
 
                     <div className="bg-slate-50 p-4 rounded-3xl flex items-center justify-around text-center">
                       <div>
-                        <p className="text-[10px] uppercase font-black text-slate-400 tracking-widest mb-1">Reviews</p>
-                        <p className="text-xl font-black text-slate-900">{reviews.filter(r => r.courseCode === selectedCourse).length}</p>
+                        <p className="text-[10px] uppercase font-bold text-slate-400 tracking-widest mb-1">Reviews</p>
+                        <p className="text-xl font-bold text-slate-900">{reviews.filter(r => r.courseCode === selectedCourse).length}</p>
                       </div>
                       <div className="h-8 w-px bg-slate-200" />
                       <div>
-                        <p className="text-[10px] uppercase font-black text-slate-400 tracking-widest mb-1">Materials</p>
-                        <p className="text-xl font-black text-slate-900">{materials.filter(m => m.courseCode === selectedCourse).length}</p>
+                        <p className="text-[10px] uppercase font-bold text-slate-400 tracking-widest mb-1">Materials</p>
+                        <p className="text-xl font-bold text-slate-900">{materials.filter(m => m.courseCode === selectedCourse).length}</p>
                       </div>
                       <div className="h-8 w-px bg-slate-200" />
                       <div>
-                        <p className="text-[10px] uppercase font-black text-slate-400 tracking-widest mb-1">Avg Rating</p>
-                        <p className="text-xl font-black text-emerald-600">
+                        <p className="text-[10px] uppercase font-bold text-slate-400 tracking-widest mb-1">Avg Rating</p>
+                        <p className="text-xl font-bold text-emerald-600">
                           {reviews.filter(r => r.courseCode === selectedCourse).length > 0
                             ? (reviews.filter(r => r.courseCode === selectedCourse).reduce((acc, r) => acc + r.rating, 0) / reviews.filter(r => r.courseCode === selectedCourse).length).toFixed(1)
                             : '-'
@@ -360,13 +360,13 @@ export default function CourseLibrary() {
                   {/* Reviews Section */}
                   <div className="space-y-6">
                     <div className="flex items-center justify-between">
-                      <h3 className="text-xl font-black text-slate-900 flex items-center">
+                      <h3 className="text-xl font-bold text-slate-900 flex items-center">
                         <MessageSquare className="h-5 w-5 mr-2 text-indigo-600" />
                         Community Reviews
                       </h3>
                       <button 
                         onClick={() => setIsAddingReview(true)}
-                        className="p-1 px-3 bg-indigo-50 text-indigo-600 text-xs font-black rounded-lg hover:bg-indigo-100 transition-colors"
+                        className="p-1 px-3 bg-indigo-50 text-indigo-600 text-xs font-bold rounded-lg hover:bg-indigo-100 transition-colors"
                       >
                         Add Review
                       </button>
@@ -390,7 +390,7 @@ export default function CourseLibrary() {
                             </div>
                             <p className="text-slate-700 text-sm font-medium italic">"{r.comment}"</p>
                             <div className="flex items-center justify-between pt-2 border-t border-slate-50">
-                              <p className="text-[10px] text-indigo-600 font-black uppercase">Difficulty: {r.difficulty}/5</p>
+                              <p className="text-[10px] text-indigo-600 font-bold uppercase">Difficulty: {r.difficulty}/5</p>
                               <span className="text-[9px] text-slate-400 uppercase">{new Date(r.createdAt).toLocaleDateString()}</span>
                             </div>
                           </motion.div>
@@ -402,13 +402,13 @@ export default function CourseLibrary() {
                   {/* Materials Section */}
                   <div className="space-y-6">
                     <div className="flex items-center justify-between">
-                      <h3 className="text-xl font-black text-slate-900 flex items-center">
+                      <h3 className="text-xl font-bold text-slate-900 flex items-center">
                         <FileText className="h-5 w-5 mr-2 text-rose-500" />
                         Study Materials
                       </h3>
                       <button 
                         onClick={() => setIsAddingMaterial(true)}
-                        className="p-1 px-3 bg-rose-50 text-rose-600 text-xs font-black rounded-lg hover:bg-rose-100 transition-colors"
+                        className="p-1 px-3 bg-rose-50 text-rose-600 text-xs font-bold rounded-lg hover:bg-rose-100 transition-colors"
                       >
                         Contribute
                       </button>
@@ -452,7 +452,7 @@ export default function CourseLibrary() {
                 <BookOpen className="h-24 w-24 text-slate-100 group-hover:text-indigo-100 transition-colors group-hover:scale-110 duration-500" />
                 <PlusCircle className="absolute -bottom-2 -right-2 h-10 w-10 text-slate-50 transition-colors group-hover:text-indigo-200" />
               </div>
-              <h3 className="text-3xl font-black text-slate-900 tracking-tighter mb-4">Select a Knowledge Base</h3>
+              <h3 className="text-3xl font-bold text-slate-900 tracking-tighter mb-4">Select a Knowledge Base</h3>
               <p className="text-slate-500 mt-2 max-w-sm font-medium leading-relaxed">
                 Dive into specific courses to find student reviews, AI-generated success guides, and peer-contributed study materials.
               </p>
@@ -478,7 +478,7 @@ export default function CourseLibrary() {
             <motion.div initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} className="bg-white rounded-[2.5rem] shadow-2xl w-full max-w-md overflow-hidden">
               <div className="p-8 space-y-6">
                 <div className="flex justify-between items-center">
-                  <h2 className="text-2xl font-black text-slate-900 tracking-tighter">{editingCourseId ? 'Edit Course' : 'Contribute Course'}</h2>
+                  <h2 className="text-2xl font-bold text-slate-900 tracking-tighter">{editingCourseId ? 'Edit Course' : 'Contribute Course'}</h2>
                   <button onClick={() => { setIsAddingCourse(false); setEditingCourseId(null); }}><X className="h-6 w-6 text-slate-400 hover:text-slate-600" /></button>
                 </div>
                 <p className="text-slate-500 text-sm">
@@ -486,7 +486,7 @@ export default function CourseLibrary() {
                 </p>
                 <div className="space-y-4">
                   <div>
-                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-2">Course Code</label>
+                    <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest block mb-2">Course Code</label>
                     <input 
                       type="text" 
                       placeholder="e.g. CSC 201" 
@@ -496,7 +496,7 @@ export default function CourseLibrary() {
                     />
                   </div>
                   <div>
-                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-2">Full Title</label>
+                    <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest block mb-2">Full Title</label>
                     <input 
                       type="text" 
                       placeholder="e.g. Algorithms & Data Structures" 
@@ -506,7 +506,7 @@ export default function CourseLibrary() {
                     />
                   </div>
                   <div>
-                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-2">Credit Units</label>
+                    <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest block mb-2">Credit Units</label>
                     <input 
                       type="number" 
                       className="w-full px-5 py-4 bg-slate-50 border border-slate-100 rounded-2xl focus:ring-2 focus:ring-indigo-500 outline-none font-bold"
@@ -518,7 +518,7 @@ export default function CourseLibrary() {
                 <button 
                   onClick={handleAddCourse}
                   disabled={!courseForm.code || !courseForm.title}
-                  className="w-full py-5 bg-indigo-600 text-white font-black rounded-3xl hover:bg-indigo-700 transition-all shadow-xl shadow-indigo-100 active:scale-95 disabled:opacity-50 mt-4"
+                  className="w-full py-5 bg-indigo-600 text-white font-bold rounded-3xl hover:bg-indigo-700 transition-all shadow-xl shadow-indigo-100 active:scale-95 disabled:opacity-50 mt-4"
                 >
                   {editingCourseId ? 'Update Listing' : 'Publish to Library'}
                 </button>
@@ -532,12 +532,12 @@ export default function CourseLibrary() {
              <motion.div initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} className="bg-white rounded-[2.5rem] shadow-2xl w-full max-w-md overflow-hidden">
                 <div className="p-8 space-y-6">
                   <div className="flex justify-between items-center">
-                    <h2 className="text-2xl font-black text-slate-900 tracking-tighter">Student Review</h2>
+                    <h2 className="text-2xl font-bold text-slate-900 tracking-tighter">Student Review</h2>
                     <button onClick={() => setIsAddingReview(false)}><X className="h-6 w-6 text-slate-400 hover:text-slate-600" /></button>
                   </div>
                   <div className="space-y-4">
                     <div>
-                      <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-1">Rating</label>
+                      <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest block mb-1">Rating</label>
                       <div className="flex space-x-2">
                         {[1,2,3,4,5].map(s => (
                           <button key={s} onClick={() => setReviewForm({...reviewForm, rating: s})}><Star className={`h-8 w-8 ${s <= reviewForm.rating ? 'text-amber-400 fill-amber-400' : 'text-slate-200'}`} /></button>
@@ -545,11 +545,11 @@ export default function CourseLibrary() {
                       </div>
                     </div>
                     <div>
-                      <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-1">Difficulty level (1-5)</label>
+                      <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest block mb-1">Difficulty level (1-5)</label>
                       <input type="range" min="1" max="5" value={reviewForm.difficulty} onChange={e => setReviewForm({...reviewForm, difficulty: parseInt(e.target.value)})} className="w-full accent-indigo-600" />
                     </div>
                     <div>
-                      <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-2">Experience</label>
+                      <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest block mb-2">Experience</label>
                       <textarea 
                         className="w-full px-5 py-4 bg-slate-50 border border-slate-100 rounded-2xl focus:ring-2 focus:ring-indigo-500 outline-none font-medium h-24 resize-none"
                         placeholder="What was the course like? (Lecturers, exams, etc.)"
@@ -558,7 +558,7 @@ export default function CourseLibrary() {
                       />
                     </div>
                     <div>
-                      <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-2">Pro Prep Tip</label>
+                      <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest block mb-2">Pro Prep Tip</label>
                       <input 
                         className="w-full px-5 py-4 bg-slate-50 border border-slate-100 rounded-2xl focus:ring-2 focus:ring-indigo-500 outline-none text-xs italic"
                         placeholder="e.g. Focus on Chapter 4 for midterms"
@@ -574,7 +574,7 @@ export default function CourseLibrary() {
                   <button 
                     onClick={handleAddReview}
                     disabled={!reviewForm.comment}
-                    className="w-full py-5 bg-indigo-600 text-white font-black rounded-3xl hover:bg-indigo-700 transition-all shadow-xl shadow-indigo-100 active:scale-95 disabled:opacity-50"
+                    className="w-full py-5 bg-indigo-600 text-white font-bold rounded-3xl hover:bg-indigo-700 transition-all shadow-xl shadow-indigo-100 active:scale-95 disabled:opacity-50"
                   >
                     Post Experience
                   </button>
@@ -588,12 +588,12 @@ export default function CourseLibrary() {
              <motion.div initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} className="bg-white rounded-[2.5rem] shadow-2xl w-full max-w-md overflow-hidden">
                 <div className="p-8 space-y-6">
                   <div className="flex justify-between items-center">
-                    <h2 className="text-2xl font-black text-slate-900 tracking-tighter">Share Resource</h2>
+                    <h2 className="text-2xl font-bold text-slate-900 tracking-tighter">Share Resource</h2>
                     <button onClick={() => setIsAddingMaterial(false)}><X className="h-6 w-6 text-slate-400 hover:text-slate-600" /></button>
                   </div>
                   <div className="space-y-4">
                     <div>
-                      <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-2">Resource Title</label>
+                      <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest block mb-2">Resource Title</label>
                       <input 
                         className="w-full px-5 py-4 bg-slate-50 border border-slate-100 rounded-2xl focus:ring-2 focus:ring-indigo-500 outline-none font-bold"
                         placeholder="e.g. CSC 201 Past Questions 2023"
@@ -602,7 +602,7 @@ export default function CourseLibrary() {
                       />
                     </div>
                     <div>
-                      <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-2">Category</label>
+                      <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest block mb-2">Category</label>
                       <select 
                         className="w-full px-5 py-4 bg-slate-50 border border-slate-100 rounded-2xl focus:ring-2 focus:ring-indigo-500 outline-none font-bold"
                         value={materialForm.type}
@@ -616,7 +616,7 @@ export default function CourseLibrary() {
                       </select>
                     </div>
                     <div>
-                      <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-2">URL (Drive, Cloud, etc.)</label>
+                      <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest block mb-2">URL (Drive, Cloud, etc.)</label>
                       <input 
                         className="w-full px-5 py-4 bg-slate-50 border border-slate-100 rounded-2xl focus:ring-2 focus:ring-indigo-500 outline-none text-indigo-600 font-bold"
                         placeholder="https://drive.google.com/..."
@@ -628,7 +628,7 @@ export default function CourseLibrary() {
                   <button 
                   onClick={handleAddMaterial}
                   disabled={!materialForm.title || !materialForm.url}
-                  className="w-full py-5 bg-rose-600 text-white font-black rounded-3xl hover:bg-rose-700 transition-all shadow-xl shadow-rose-100 active:scale-95 disabled:opacity-50 mt-4"
+                  className="w-full py-5 bg-rose-600 text-white font-bold rounded-3xl hover:bg-rose-700 transition-all shadow-xl shadow-rose-100 active:scale-95 disabled:opacity-50 mt-4"
                 >
                   Share Repository
                 </button>

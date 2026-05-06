@@ -159,52 +159,52 @@ export default function SemesterDetail() {
 
   return (
     <div className="space-y-8">
-      <div className="flex items-center space-x-4 mb-6">
-        <Link to="/semesters" className="p-2 bg-white border border-slate-200 rounded-xl text-slate-600 hover:bg-slate-50 transition-colors shadow-sm">
+      <div className="flex items-start md:items-center space-x-4 mb-6">
+        <Link to="/semesters" className="p-2 bg-white border border-slate-200 rounded-xl text-slate-600 hover:bg-slate-50 transition-colors shadow-sm shrink-0 mt-1 md:mt-0">
           <ArrowLeft className="h-5 w-5" />
         </Link>
         <div>
-          <div className="flex items-center space-x-3">
-            <span className="px-3 py-1 bg-indigo-100 text-indigo-700 text-xs font-bold rounded-full uppercase tracking-wider">
+          <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3">
+            <span className="px-3 py-1 bg-indigo-100 text-indigo-700 text-xs font-bold rounded-full uppercase tracking-wider w-fit">
               {semester.level}
             </span>
-            <h1 className="text-3xl font-extrabold text-slate-900">{semester.name}</h1>
+            <h1 className="text-2xl sm:text-3xl font-bold text-slate-900 leading-tight">{semester.name}</h1>
           </div>
-          <p className="text-slate-500 mt-1 font-medium">GPA: <span className="text-indigo-600 font-bold">{gpa.toFixed(2)}</span> • Units: {totalUnits}</p>
+          <p className="text-slate-500 mt-2 sm:mt-1 font-medium">GPA: <span className="text-indigo-600 font-bold">{gpa.toFixed(2)}</span> • Units: {totalUnits}</p>
         </div>
       </div>
 
-      <div className="flex justify-between items-center bg-white p-4 rounded-2xl shadow-sm border border-slate-200">
+      <div className="flex flex-col xl:flex-row xl:justify-between items-start xl:items-center bg-white p-4 rounded-2xl shadow-sm border border-slate-200 gap-4">
         <h2 className="text-xl font-bold text-slate-900">Courses</h2>
-        <div className="flex items-center space-x-3">
+        <div className="flex flex-wrap items-center gap-2 sm:gap-3 w-full xl:w-auto">
           <button
             onClick={() => setIsSimulating(true)}
             disabled={semesterCourses.length === 0}
-            className="flex items-center px-4 py-2 bg-white text-emerald-600 font-medium rounded-xl hover:bg-emerald-50 border border-emerald-200 transition-colors shadow-sm disabled:opacity-50"
+            className="flex-1 sm:flex-none justify-center flex items-center px-4 py-2 bg-white text-emerald-600 font-medium rounded-xl hover:bg-emerald-50 border border-emerald-200 transition-colors shadow-sm disabled:opacity-50"
           >
-            <SimulatorIcon className="h-4 w-4 mr-2" />
-            GPA Simulator
+            <SimulatorIcon className="h-4 w-4 mr-2 shrink-0" />
+            <span className="whitespace-nowrap">GPA Simulator</span>
           </button>
           <button
             onClick={handleAutoGenerate}
             disabled={isGenerating || !profile?.department}
-            className="flex items-center px-4 py-2 bg-slate-50 text-indigo-600 font-medium rounded-xl hover:bg-slate-100 border border-indigo-200 transition-colors shadow-sm disabled:opacity-50"
+            className="flex-1 sm:flex-none justify-center flex items-center px-4 py-2 bg-slate-50 text-indigo-600 font-medium rounded-xl hover:bg-slate-100 border border-indigo-200 transition-colors shadow-sm disabled:opacity-50"
             title={!profile?.department ? 'Please set your department in profile first' : ''}
           >
             {isGenerating ? (
-              <LoaderIcon className="h-4 w-4 mr-2 animate-spin" />
+              <LoaderIcon className="h-4 w-4 mr-2 animate-spin shrink-0" />
             ) : (
-              <Sparkles className="h-4 w-4 mr-2" />
+              <Sparkles className="h-4 w-4 mr-2 shrink-0" />
             )}
-            AI Generate
+            <span className="whitespace-nowrap">AI Generate</span>
           </button>
           {!isAdding && (
             <button
               onClick={() => setIsAdding(true)}
-              className="flex items-center px-4 py-2 bg-indigo-600 text-white font-medium rounded-xl hover:bg-indigo-700 transition-colors shadow-sm"
+              className="flex-1 sm:flex-none justify-center flex items-center px-4 py-2 bg-indigo-600 text-white font-medium rounded-xl hover:bg-indigo-700 transition-colors shadow-sm"
             >
-              <Plus className="h-5 w-5 mr-2" />
-              Add Course
+              <Plus className="h-5 w-5 mr-2 shrink-0" />
+              <span className="whitespace-nowrap">Add Course</span>
             </button>
           )}
         </div>
@@ -311,7 +311,7 @@ export default function SemesterDetail() {
 
       <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
         <div className="overflow-x-auto">
-          <table className="w-full text-left border-collapse">
+          <table className="w-full text-left border-collapse min-w-[700px]">
             <thead>
               <tr className="bg-slate-50 border-b border-slate-200">
                 <th className="px-6 py-4 text-sm font-semibold text-slate-600 uppercase tracking-wider">Course Code</th>

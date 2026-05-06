@@ -176,14 +176,14 @@ export default function Dashboard() {
                     <BrainCircuit className="h-6 w-6 text-white" />
                   </div>
                   <div>
-                    <h3 className="text-xl font-black text-slate-900 tracking-tight">AI Academic Coach</h3>
+                    <h3 className="text-xl font-bold text-slate-900 tracking-tight">AI Academic Coach</h3>
                     <p className="text-slate-500 text-sm font-medium">Personalized strategy based on your actual performance data.</p>
                   </div>
                 </div>
                 {!aiInsight && !isGeneratingInsight && (
                   <button 
                     onClick={generateAIInsight}
-                    className="flex items-center px-6 py-3 bg-indigo-600 text-white font-black rounded-2xl hover:bg-indigo-700 transition-all active:scale-95 shadow-md"
+                    className="flex items-center px-6 py-3 bg-indigo-600 text-white font-bold rounded-2xl hover:bg-indigo-700 transition-all active:scale-95 shadow-md"
                   >
                     <Sparkles className="h-4 w-4 mr-2" />
                     Analyze Data
@@ -222,7 +222,7 @@ export default function Dashboard() {
                     <div className="mt-4 flex justify-end">
                       <button 
                         onClick={() => setAiInsight(null)}
-                        className="text-[10px] font-black text-indigo-600 uppercase tracking-widest hover:underline"
+                        className="text-[10px] font-bold text-indigo-600 uppercase tracking-widest hover:underline"
                       >
                         Dismiss Analysis
                       </button>
