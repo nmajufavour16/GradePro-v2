@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Outlet, Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
-import { BookOpen, LayoutDashboard, LogOut, Menu, X, FileText, Sparkles, ShieldCheck, ChevronLeft, ChevronRight, Settings as SettingsIcon } from 'lucide-react';
+import { BookOpen, LayoutDashboard, LogOut, Menu, X, FileText, Sparkles, ShieldCheck, ChevronLeft, ChevronRight, Settings as SettingsIcon, Library } from 'lucide-react';
 import FloatingAIChat from './FloatingAIChat';
 import UserTour from './UserTour';
 import { GradeProLogo } from './GradeProLogo';
@@ -17,6 +17,7 @@ export default function Layout() {
     { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
     { name: 'Semesters', href: '/semesters', icon: BookOpen },
     { name: 'Report', href: '/report', icon: FileText },
+    { name: 'Library', href: '/library', icon: Library },
     { name: 'GradePro AI', href: '/ai-chat', icon: Sparkles },
     ...(profile?.role === 'admin' ? [{ name: 'Admin', href: '/admin', icon: ShieldCheck }] : []),
   ];

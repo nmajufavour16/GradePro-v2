@@ -28,7 +28,7 @@ export async function generateCurriculum(institution: string, department: string
     `;
 
     const response = await ai.models.generateContent({
-      model: 'gemini-3-flash-preview',
+      model: 'gemini-3.1-pro-preview',
       contents: [{ role: 'user', parts: [{ text: prompt }] }],
     });
     
@@ -85,7 +85,7 @@ export async function generateCoursesForSemester(institution: string, department
     `;
 
     const response = await ai.models.generateContent({
-      model: 'gemini-3-flash-preview',
+      model: 'gemini-3.1-pro-preview',
       contents: [{ role: 'user', parts: [{ text: prompt }] }],
     });
     
@@ -113,6 +113,66 @@ export async function generateCoursesForSemester(institution: string, department
     return addedCourses;
   } catch (error) {
     console.error("Failed to generate courses", error);
+    throw error;
+  }
+}
+
+export async function scanTranscript(fileBase64: string, mimeType: string) {
+  try {
+    const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY as string });
+    const prompt = `
+      You are an expert academic transcript parser. Extract courses from this transcript image/PDF.
+      For each course, find:
+      1. Course Code (e.g., MTH 101)
+      2. Course Title (e.g., Mathematical Methods)
+      3. Units/Credits (number)
+      4. Grade received (e.g., A, B, C, F)
+      5. Academic level if possible (e.g., 100 Level)
+      6. Semester name if possible (e.g., First Semester)
+      7. Category: Choose from 'General', 'Core', 'Elective', 'Practical' based on the course title/code.
+
+      Provide the response ONLY as a valid JSON object with the following schema:
+      {
+        "semesters": [
+          {
+            "level": "100 Level",
+            "name": "First Semester",
+            "courses": [
+              { "code": "MTH 101", "title": "Mathematical Methods", "units": 3, "grade": "A", "category": "Core" }
+            ]
+          }
+        ]
+      }
+      If level or semester name is not clear, use best guesses like "100 Level" and "First Semester".
+      Do not include markdown blocks or any other text.
+    `;
+
+    const response = await ai.models.generateContent({
+      model: 'gemini-3.1-pro-preview',
+      contents: [
+        {
+          role: 'user',
+          parts: [
+            { text: prompt },
+            {
+              inlineData: {
+                data: fileBase64.split(',')[1] || fileBase64,
+                mimeType: mimeType
+              }
+            }
+          ],
+        }
+      ],
+    });
+
+    const rawText = response.text || '';
+    const jsonMatch = rawText.match(/\{[\s\S]*\}/);
+    const jsonText = jsonMatch ? jsonMatch[0] : rawText.trim();
+    
+    if (!jsonText) return null;
+    return JSON.parse(jsonText);
+  } catch (error) {
+    console.error("Failed to scan transcript", error);
     throw error;
   }
 }

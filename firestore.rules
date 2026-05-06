@@ -1,112 +1,91 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-    // ===============================================================
-    // Assumed Data Model
-    // ===============================================================
-    //
-    // Collection: users
-    // Document ID: {userId}
-    // Fields:
-    //   - uid: string (required)
-    //   - email: string (required)
-    //   - displayName: string (optional)
-    //   - photoURL: string (optional)
-    //   - targetCGPA: number (optional)
-    //   - gradingScale: number (optional)
-    //   - role: string (required, 'admin' or 'user')
-    //   - createdAt: string (optional)
-    //   - institution: string (optional)
-    //   - faculty: string (optional)
-    //   - department: string (optional)
-    //   - level: string (optional)
-    //
-    // Collection: semesters
-    // Document ID: {semesterId}
-    // Fields:
-    //   - userId: string (required)
-    //   - name: string (required)
-    //   - level: string (optional)
-    //   - createdAt: string (optional)
-    //
-    // Collection: courses
-    // Document ID: {courseId}
-    // Fields:
-    //   - userId: string (required)
-    //   - semesterId: string (required)
-    //   - code: string (required)
-    //   - title: string (optional)
-    //   - units: number (required)
-    //   - grade: string (optional)
-    //   - createdAt: string (optional)
-    //
-    // ===============================================================
+    // 0. Global Safety Net
+    match /{document=**} {
+      allow read, write: if false;
+    }
 
     // ===============================================================
     // Helper Functions
     // ===============================================================
     
-    function isAuthenticated() {
+    function isSignedIn() {
       return request.auth != null;
     }
     
     function isOwner(userId) {
-      return isAuthenticated() && request.auth.uid == userId;
+      return isSignedIn() && request.auth.uid == userId;
     }
-    
-    function isDocOwner() {
-      return isAuthenticated() && request.auth.uid == resource.data.userId;
-    }
-    
+
     function isAdmin() {
-      let userDoc = get(/databases/$(database)/documents/users/$(request.auth.uid));
-      let isDocAdmin = userDoc != null && userDoc.data.role == 'admin';
-      let isEmailAdmin = request.auth.token.email == "nmajufavour16@gmail.com";
-      return isAuthenticated() && (isDocAdmin || isEmailAdmin);
+      // Check for fixed admin email and optionally a document in /admins/
+      return isSignedIn() && (
+        request.auth.token.email == "nmajufavour16@gmail.com" || 
+        exists(/databases/$(database)/documents/admins/$(request.auth.uid))
+      );
     }
     
-    function hasRequiredFields(fields) {
-      return request.resource.data.keys().hasAll(fields);
+    function isValidId(id) {
+       return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
     }
-    
-    function uidUnchanged() {
-      return !('uid' in request.resource.data) || request.resource.data.uid == request.auth.uid;
+
+    function incoming() {
+      return request.resource.data;
     }
-    
-    function uidNotModified() {
-      return !('uid' in request.resource.data) || request.resource.data.uid == resource.data.uid;
-    }
-    
-    function userIdUnchanged() {
-      return !('userId' in request.resource.data) || request.resource.data.userId == request.auth.uid;
-    }
-    
-    function userIdNotModified() {
-      return !('userId' in request.resource.data) || request.resource.data.userId == resource.data.userId;
+
+    function existing() {
+      return resource.data;
     }
 
     // ===============================================================
-    // Domain Validators
+    // Validation Blueprints
     // ===============================================================
-    
-    function isValidUser(data) {
-      return hasRequiredFields(['uid', 'email', 'role']) &&
-             data.uid is string &&
+
+    function isValidUserProfile(data) {
+      return data.keys().hasAll(['uid', 'email', 'role']) &&
+             data.uid == request.auth.uid &&
              data.email is string &&
-             data.role in ['admin', 'user'];
+             data.role in ['user', 'admin'] &&
+             (data.get('targetCGPA', 5.0) is number) &&
+             (data.get('gradingScale', 5.0) is number);
     }
-    
+
     function isValidSemester(data) {
-      return hasRequiredFields(['userId', 'name']) &&
-             data.userId is string &&
-             data.name is string;
+      return data.keys().hasAll(['userId', 'name']) &&
+             data.userId == request.auth.uid &&
+             data.name is string && data.name.size() <= 100;
     }
-    
+
     function isValidCourse(data) {
-      return hasRequiredFields(['userId', 'semesterId', 'code', 'units']) &&
-             data.userId is string &&
+      return data.keys().hasAll(['userId', 'semesterId', 'code', 'units']) &&
+             data.userId == request.auth.uid &&
              data.semesterId is string &&
-             data.code is string &&
+             data.code is string && data.code.size() <= 20 &&
+             data.units is number && data.units >= 0 && data.units <= 10;
+    }
+
+    function isValidReview(data) {
+      return data.keys().hasAll(['courseCode', 'userId', 'rating', 'comment', 'createdAt']) &&
+             data.userId == request.auth.uid &&
+             data.courseCode is string && data.courseCode.size() <= 20 &&
+             data.rating is number && data.rating >= 1 && data.rating <= 5 &&
+             data.comment is string && data.comment.size() <= 1000;
+    }
+
+    function isValidMaterial(data) {
+      return data.keys().hasAll(['courseCode', 'userId', 'title', 'type', 'url', 'createdAt']) &&
+             data.userId == request.auth.uid &&
+             data.courseCode is string && data.courseCode.size() <= 20 &&
+             data.title is string && data.title.size() <= 200 &&
+             data.url is string && data.url.size() <= 1000;
+    }
+
+    function isValidCommunityCourse(data) {
+      return data.keys().hasAll(['code', 'title', 'units', 'addedBy', 'createdAt']) &&
+             data.addedBy == request.auth.uid &&
+             data.code is string && data.code.size() <= 20 &&
+             data.title is string && data.title.size() <= 200 &&
              data.units is number;
     }
 
@@ -114,54 +93,75 @@ service cloud.firestore {
     // Rules
     // ===============================================================
 
-    // Metadata rules
     match /metadata/{configId} {
-      allow read: if isAuthenticated();
+      allow read: if isSignedIn();
       allow write: if isAdmin();
     }
 
     match /users/{userId} {
       allow read: if isOwner(userId) || isAdmin();
-      allow create: if isAuthenticated() && isValidUser(request.resource.data) && ((isOwner(userId) && request.resource.data.role == 'user') || isAdmin());
-      allow update: if isAuthenticated() && isValidUser(request.resource.data) && ((isOwner(userId) && request.resource.data.role == resource.data.role) || isAdmin());
-      allow delete: if isAdmin();
+      allow create: if isSignedIn() && isValidUserProfile(incoming());
+      allow update: if (isOwner(userId) || isAdmin()) && 
+                    incoming().diff(existing()).affectedKeys().hasOnly(['displayName', 'photoURL', 'targetCGPA', 'gradingScale', 'institution', 'faculty', 'department', 'level', 'updatedAt']);
     }
-    
+
     match /semesters/{semesterId} {
-      allow read: if isDocOwner() || isAdmin();
-      allow create: if isAuthenticated() && isValidSemester(request.resource.data) && userIdUnchanged();
-      allow update: if isAuthenticated() && isValidSemester(request.resource.data) && userIdNotModified() && (isDocOwner() || isAdmin());
-      allow delete: if isDocOwner() || isAdmin();
+      allow read: if isSignedIn() && (existing().userId == request.auth.uid || isAdmin());
+      allow create: if isSignedIn() && isValidSemester(incoming());
+      allow update: if isSignedIn() && existing().userId == request.auth.uid && isValidSemester(incoming()) &&
+                    incoming().diff(existing()).affectedKeys().hasOnly(['name', 'level', 'updatedAt']);
+      allow delete: if isSignedIn() && (existing().userId == request.auth.uid || isAdmin());
     }
-    
+
     match /courses/{courseId} {
-      allow read: if isDocOwner() || isAdmin();
-      allow create: if isAuthenticated() && isValidCourse(request.resource.data) && userIdUnchanged();
-      allow update: if isAuthenticated() && isValidCourse(request.resource.data) && userIdNotModified() && (isDocOwner() || isAdmin());
-      allow delete: if isDocOwner() || isAdmin();
+      allow read: if isSignedIn() && (existing().userId == request.auth.uid || isAdmin());
+      allow create: if isSignedIn() && isValidCourse(incoming());
+      allow update: if isSignedIn() && existing().userId == request.auth.uid && isValidCourse(incoming()) &&
+                    incoming().diff(existing()).affectedKeys().hasOnly(['code', 'title', 'units', 'grade', 'score', 'category', 'isCarryover', 'assessments', 'updatedAt']);
+      allow delete: if isSignedIn() && (existing().userId == request.auth.uid || isAdmin());
     }
 
     match /chatSessions/{sessionId} {
-      allow read: if isDocOwner() || isAdmin();
-      allow create: if isAuthenticated() && userIdUnchanged();
-      allow update: if isAuthenticated() && userIdNotModified() && (isDocOwner() || isAdmin());
-      allow delete: if isDocOwner() || isAdmin();
+      allow read: if isSignedIn() && (existing().userId == request.auth.uid || isAdmin());
+      allow create: if isSignedIn() && incoming().userId == request.auth.uid;
+      allow update: if isSignedIn() && existing().userId == request.auth.uid &&
+                    incoming().diff(existing()).affectedKeys().hasOnly(['title', 'updatedAt']);
+      allow delete: if isSignedIn() && (existing().userId == request.auth.uid || isAdmin());
     }
 
     match /chatMessages/{messageId} {
-      allow read: if isDocOwner() || isAdmin();
-      allow create: if isAuthenticated() && userIdUnchanged();
-      allow update: if isAuthenticated() && userIdNotModified() && (isDocOwner() || isAdmin());
-      allow delete: if isDocOwner() || isAdmin();
+      allow read: if isSignedIn() && (existing().userId == request.auth.uid || isAdmin());
+      allow create: if isSignedIn() && incoming().userId == request.auth.uid;
+      allow delete: if isSignedIn() && (existing().userId == request.auth.uid || isAdmin());
+    }
+
+    match /courseReviews/{reviewId} {
+      allow read: if isSignedIn();
+      allow create: if isSignedIn() && isValidReview(incoming());
+      allow update: if (isOwner(existing().userId) || isAdmin()) && isValidReview(incoming()) &&
+                    incoming().diff(existing()).affectedKeys().hasOnly(['rating', 'difficulty', 'comment', 'tips', 'isAnonymous', 'updatedAt']);
+      allow delete: if isOwner(existing().userId) || isAdmin();
+    }
+
+    match /courseMaterials/{materialId} {
+      allow read: if isSignedIn();
+      allow create: if isSignedIn() && isValidMaterial(incoming());
+      allow update: if (isOwner(existing().userId) || isAdmin()) && isValidMaterial(incoming()) &&
+                    incoming().diff(existing()).affectedKeys().hasOnly(['title', 'type', 'url', 'description', 'updatedAt']);
+      allow delete: if isOwner(existing().userId) || isAdmin();
+    }
+
+    match /communityCourses/{courseId} {
+      allow read: if isSignedIn();
+      allow create: if isSignedIn() && isValidCommunityCourse(incoming());
+      allow update: if (isOwner(existing().addedBy) || isAdmin()) && isValidCommunityCourse(incoming()) &&
+                    incoming().diff(existing()).affectedKeys().hasOnly(['code', 'title', 'units', 'department', 'institution', 'updatedAt']);
+      allow delete: if isOwner(existing().addedBy) || isAdmin();
     }
     
+    // For connection tests
     match /test/{docId} {
       allow read: if true;
-    }
-    
-    match /metadata/{docId} {
-      allow read: if isAuthenticated();
-      allow write: if isAdmin();
     }
   }
 }

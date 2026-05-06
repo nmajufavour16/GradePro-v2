@@ -64,6 +64,16 @@ export interface Semester {
   createdAt?: string;
 }
 
+export interface Assessment {
+  id: string;
+  title: string;
+  type: 'Test' | 'Assignment' | 'Exam' | 'Project' | 'Other';
+  weight: number; 
+  score?: number;
+  dueDate?: string;
+  isCompleted: boolean;
+}
+
 export interface Course {
   id: string;
   userId: string;
@@ -75,7 +85,45 @@ export interface Course {
   score?: number;
   gradePoint: number;
   isCarryover?: boolean;
+  category?: 'General' | 'Core' | 'Elective' | 'Practical';
+  assessments?: Assessment[];
   createdAt?: string;
+}
+
+export interface CourseReview {
+  id: string;
+  courseCode: string;
+  userId: string;
+  userName?: string;
+  rating: number;
+  difficulty: number; // 1-5
+  comment: string;
+  tips: string;
+  isAnonymous: boolean;
+  createdAt: string;
+}
+
+export interface CourseMaterial {
+  id: string;
+  courseCode: string;
+  userId: string;
+  userName?: string;
+  title: string;
+  type: 'Note' | 'Past Question' | 'Textbook' | 'Video' | 'Link';
+  url: string; // Could be a drive link or actual file URL
+  description?: string;
+  createdAt: string;
+}
+
+export interface CommunityCourse {
+  id: string;
+  code: string;
+  title: string;
+  units: number;
+  department?: string;
+  institution?: string;
+  addedBy: string;
+  createdAt: string;
 }
 
 export enum OperationType {

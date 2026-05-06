@@ -74,6 +74,54 @@
       },
       "required": ["chatId", "userId", "role", "content"]
     },
+    "CourseReview": {
+      "title": "CourseReview",
+      "description": "Student review for a course",
+      "type": "object",
+      "properties": {
+        "courseCode": { "type": "string" },
+        "userId": { "type": "string" },
+        "userName": { "type": "string" },
+        "rating": { "type": "number" },
+        "difficulty": { "type": "number" },
+        "comment": { "type": "string" },
+        "tips": { "type": "string" },
+        "isAnonymous": { "type": "boolean" },
+        "createdAt": { "type": "string" }
+      },
+      "required": ["courseCode", "userId", "rating", "comment", "createdAt"]
+    },
+    "CourseMaterial": {
+      "title": "CourseMaterial",
+      "description": "Shared study material for a course",
+      "type": "object",
+      "properties": {
+        "courseCode": { "type": "string" },
+        "userId": { "type": "string" },
+        "userName": { "type": "string" },
+        "title": { "type": "string" },
+        "type": { "type": "string", "enum": ["Note", "Past Question", "Textbook", "Video", "Link"] },
+        "url": { "type": "string" },
+        "description": { "type": "string" },
+        "createdAt": { "type": "string" }
+      },
+      "required": ["courseCode", "userId", "title", "type", "url", "createdAt"]
+    },
+    "CommunityCourse": {
+      "title": "CommunityCourse",
+      "description": "A course added by the community",
+      "type": "object",
+      "properties": {
+        "code": { "type": "string" },
+        "title": { "type": "string" },
+        "units": { "type": "number" },
+        "department": { "type": "string" },
+        "institution": { "type": "string" },
+        "addedBy": { "type": "string" },
+        "createdAt": { "type": "string" }
+      },
+      "required": ["code", "title", "units", "addedBy", "createdAt"]
+    },
     "AppMetadata": {
       "title": "AppMetadata",
       "description": "Global application metadata",
@@ -120,6 +168,18 @@
     "/chatMessages/{messageId}": {
       "schema": { "$ref": "ChatMessage" },
       "description": "Chat messages"
+    },
+    "/courseReviews/{reviewId}": {
+      "schema": { "$ref": "CourseReview" },
+      "description": "Course reviews"
+    },
+    "/courseMaterials/{materialId}": {
+      "schema": { "$ref": "CourseMaterial" },
+      "description": "Course materials"
+    },
+    "/communityCourses/{courseId}": {
+      "schema": { "$ref": "CommunityCourse" },
+      "description": "Community courses"
     }
   }
 }

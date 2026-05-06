@@ -4,13 +4,15 @@ import { useData } from '../contexts/DataContext';
 import { useAuth } from '../contexts/AuthContext';
 import { calculateCGPA } from '../utils/gpa';
 import { generateCurriculum } from '../utils/ai';
-import { Plus, Trash2, ChevronRight, BookOpen, Sparkles, Loader2 as LoaderIcon } from 'lucide-react';
+import { Plus, Trash2, ChevronRight, BookOpen, Sparkles, Loader2 as LoaderIcon, FileUp } from 'lucide-react';
+import TranscriptScanner from '../components/TranscriptScanner';
 
 export default function Semesters() {
   const { user, profile } = useAuth();
   const { semesters, courses, addSemester, deleteSemester } = useData();
   const [isAdding, setIsAdding] = useState(false);
   const [isGenerating, setIsGenerating] = useState(false);
+  const [isScanning, setIsScanning] = useState(false);
   const [level, setLevel] = useState('100L');
   const [name, setName] = useState('First Semester');
 
@@ -49,14 +51,25 @@ export default function Semesters() {
           <h1 className="text-3xl font-bold text-slate-900">Semesters</h1>
           <p className="text-slate-600 mt-1">Manage your academic terms and courses.</p>
         </div>
-        <button
-          onClick={() => setIsAdding(true)}
-          className="flex items-center justify-center px-4 py-2 bg-indigo-600 text-white font-medium rounded-xl hover:bg-indigo-700 transition-colors shadow-sm"
-        >
-          <Plus className="h-5 w-5 mr-2" />
-          Add Semester
-        </button>
+        <div className="flex flex-wrap gap-3">
+          <button
+            onClick={() => setIsScanning(true)}
+            className="flex items-center justify-center px-4 py-2 bg-white text-indigo-600 border border-indigo-200 font-medium rounded-xl hover:bg-slate-50 transition-colors shadow-sm"
+          >
+            <FileUp className="h-5 w-5 mr-2" />
+            AI Scanner
+          </button>
+          <button
+            onClick={() => setIsAdding(true)}
+            className="flex items-center justify-center px-4 py-2 bg-indigo-600 text-white font-medium rounded-xl hover:bg-indigo-700 transition-colors shadow-sm"
+          >
+            <Plus className="h-5 w-5 mr-2" />
+            Add Semester
+          </button>
+        </div>
       </div>
+
+      {isScanning && <TranscriptScanner onClose={() => setIsScanning(false)} />}
 
       {isAdding && (
         <div className="bg-white p-6 rounded-2xl shadow-sm border border-indigo-100">

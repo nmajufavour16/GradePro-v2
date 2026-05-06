@@ -1,0 +1,167 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // ===============================================================
+    // Assumed Data Model
+    // ===============================================================
+    //
+    // Collection: users
+    // Document ID: {userId}
+    // Fields:
+    //   - uid: string (required)
+    //   - email: string (required)
+    //   - displayName: string (optional)
+    //   - photoURL: string (optional)
+    //   - targetCGPA: number (optional)
+    //   - gradingScale: number (optional)
+    //   - role: string (required, 'admin' or 'user')
+    //   - createdAt: string (optional)
+    //   - institution: string (optional)
+    //   - faculty: string (optional)
+    //   - department: string (optional)
+    //   - level: string (optional)
+    //
+    // Collection: semesters
+    // Document ID: {semesterId}
+    // Fields:
+    //   - userId: string (required)
+    //   - name: string (required)
+    //   - level: string (optional)
+    //   - createdAt: string (optional)
+    //
+    // Collection: courses
+    // Document ID: {courseId}
+    // Fields:
+    //   - userId: string (required)
+    //   - semesterId: string (required)
+    //   - code: string (required)
+    //   - title: string (optional)
+    //   - units: number (required)
+    //   - grade: string (optional)
+    //   - createdAt: string (optional)
+    //
+    // ===============================================================
+
+    // ===============================================================
+    // Helper Functions
+    // ===============================================================
+    
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+    
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+    
+    function isDocOwner() {
+      return isAuthenticated() && request.auth.uid == resource.data.userId;
+    }
+    
+    function isAdmin() {
+      let userDoc = get(/databases/$(database)/documents/users/$(request.auth.uid));
+      let isDocAdmin = userDoc != null && userDoc.data.role == 'admin';
+      let isEmailAdmin = request.auth.token.email == "nmajufavour16@gmail.com";
+      return isAuthenticated() && (isDocAdmin || isEmailAdmin);
+    }
+    
+    function hasRequiredFields(fields) {
+      return request.resource.data.keys().hasAll(fields);
+    }
+    
+    function uidUnchanged() {
+      return !('uid' in request.resource.data) || request.resource.data.uid == request.auth.uid;
+    }
+    
+    function uidNotModified() {
+      return !('uid' in request.resource.data) || request.resource.data.uid == resource.data.uid;
+    }
+    
+    function userIdUnchanged() {
+      return !('userId' in request.resource.data) || request.resource.data.userId == request.auth.uid;
+    }
+    
+    function userIdNotModified() {
+      return !('userId' in request.resource.data) || request.resource.data.userId == resource.data.userId;
+    }
+
+    // ===============================================================
+    // Domain Validators
+    // ===============================================================
+    
+    function isValidUser(data) {
+      return hasRequiredFields(['uid', 'email', 'role']) &&
+             data.uid is string &&
+             data.email is string &&
+             data.role in ['admin', 'user'];
+    }
+    
+    function isValidSemester(data) {
+      return hasRequiredFields(['userId', 'name']) &&
+             data.userId is string &&
+             data.name is string;
+    }
+    
+    function isValidCourse(data) {
+      return hasRequiredFields(['userId', 'semesterId', 'code', 'units']) &&
+             data.userId is string &&
+             data.semesterId is string &&
+             data.code is string &&
+             data.units is number;
+    }
+
+    // ===============================================================
+    // Rules
+    // ===============================================================
+
+    // Metadata rules
+    match /metadata/{configId} {
+      allow read: if isAuthenticated();
+      allow write: if isAdmin();
+    }
+
+    match /users/{userId} {
+      allow read: if isOwner(userId) || isAdmin();
+      allow create: if isAuthenticated() && isValidUser(request.resource.data) && ((isOwner(userId) && request.resource.data.role == 'user') || isAdmin());
+      allow update: if isAuthenticated() && isValidUser(request.resource.data) && ((isOwner(userId) && request.resource.data.role == resource.data.role) || isAdmin());
+      allow delete: if isAdmin();
+    }
+    
+    match /semesters/{semesterId} {
+      allow read: if isDocOwner() || isAdmin();
+      allow create: if isAuthenticated() && isValidSemester(request.resource.data) && userIdUnchanged();
+      allow update: if isAuthenticated() && isValidSemester(request.resource.data) && userIdNotModified() && (isDocOwner() || isAdmin());
+      allow delete: if isDocOwner() || isAdmin();
+    }
+    
+    match /courses/{courseId} {
+      allow read: if isDocOwner() || isAdmin();
+      allow create: if isAuthenticated() && isValidCourse(request.resource.data) && userIdUnchanged();
+      allow update: if isAuthenticated() && isValidCourse(request.resource.data) && userIdNotModified() && (isDocOwner() || isAdmin());
+      allow delete: if isDocOwner() || isAdmin();
+    }
+
+    match /chatSessions/{sessionId} {
+      allow read: if isDocOwner() || isAdmin();
+      allow create: if isAuthenticated() && userIdUnchanged();
+      allow update: if isAuthenticated() && userIdNotModified() && (isDocOwner() || isAdmin());
+      allow delete: if isDocOwner() || isAdmin();
+    }
+
+    match /chatMessages/{messageId} {
+      allow read: if isDocOwner() || isAdmin();
+      allow create: if isAuthenticated() && userIdUnchanged();
+      allow update: if isAuthenticated() && userIdNotModified() && (isDocOwner() || isAdmin());
+      allow delete: if isDocOwner() || isAdmin();
+    }
+    
+    match /test/{docId} {
+      allow read: if true;
+    }
+    
+    match /metadata/{docId} {
+      allow read: if isAuthenticated();
+      allow write: if isAdmin();
+    }
+  }
+}
