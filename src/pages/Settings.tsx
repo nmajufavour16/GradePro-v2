@@ -49,7 +49,11 @@ export default function Settings() {
   };
 
   return (
-    <div className="max-w-4xl mx-auto space-y-8">
+    <motion.div 
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      className="max-w-4xl mx-auto space-y-8"
+    >
       <div>
         <h1 className="text-3xl font-bold text-slate-900">Settings</h1>
         <p className="text-slate-500 mt-2">Manage your account and app preferences</p>
@@ -71,18 +75,18 @@ export default function Settings() {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         {/* Navigation Tabs (Visual only for now) */}
         <div className="lg:col-span-1 border-r border-slate-200 pr-8 space-y-2">
-          <button className="w-full flex items-center space-x-3 px-4 py-3 bg-indigo-50 text-indigo-700 rounded-xl font-medium transition-colors">
+          <motion.button whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }} className="w-full flex items-center space-x-3 px-4 py-3 bg-indigo-50 text-indigo-700 rounded-xl font-medium transition-colors">
             <User className="h-5 w-5" />
             <span>Account Details</span>
-          </button>
-          <button className="w-full flex items-center space-x-3 px-4 py-3 text-slate-600 hover:bg-slate-50 rounded-xl font-medium transition-colors">
+          </motion.button>
+          <motion.button whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }} className="w-full flex items-center space-x-3 px-4 py-3 text-slate-600 hover:bg-slate-50 rounded-xl font-medium transition-colors">
             <Bell className="h-5 w-5" />
             <span>Notifications</span>
-          </button>
-          <button className="w-full flex items-center space-x-3 px-4 py-3 text-slate-600 hover:bg-slate-50 rounded-xl font-medium transition-colors">
+          </motion.button>
+          <motion.button whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }} className="w-full flex items-center space-x-3 px-4 py-3 text-slate-600 hover:bg-slate-50 rounded-xl font-medium transition-colors">
             <Moon className="h-5 w-5" />
             <span>Appearance</span>
-          </button>
+          </motion.button>
         </div>
 
         {/* Content Area */}
@@ -178,7 +182,9 @@ export default function Settings() {
               </div>
 
               <div className="pt-4 flex justify-end">
-                <button
+                <motion.button
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
                   type="submit"
                   disabled={loading}
                   className="flex items-center px-6 py-2 bg-indigo-600 text-white font-medium rounded-xl hover:bg-indigo-700 transition-colors shadow-sm disabled:opacity-50"
@@ -189,7 +195,7 @@ export default function Settings() {
                     <Save className="h-5 w-5 mr-2" />
                   )}
                   Save Changes
-                </button>
+                </motion.button>
               </div>
             </form>
           </section>
@@ -260,6 +266,6 @@ export default function Settings() {
           </section>
         </div>
       </div>
-    </div>
+    </motion.div>
   );
 }

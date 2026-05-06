@@ -11,6 +11,7 @@ import { generateCoursesForSemester } from '../utils/ai';
 import GPASimulator from '../components/GPASimulator';
 import AssessmentManager from '../components/AssessmentManager';
 import { fireSingleConfetti } from '../utils/confetti';
+import { motion, AnimatePresence } from 'motion/react';
 
 export default function SemesterDetail() {
   const { id } = useParams<{ id: string }>();
@@ -158,7 +159,11 @@ export default function SemesterDetail() {
   };
 
   return (
-    <div className="space-y-8">
+    <motion.div 
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      className="space-y-8"
+    >
       <div className="flex items-start md:items-center space-x-4 mb-6">
         <Link to="/semesters" className="p-2 bg-white border border-slate-200 rounded-xl text-slate-600 hover:bg-slate-50 transition-colors shadow-sm shrink-0 mt-1 md:mt-0">
           <ArrowLeft className="h-5 w-5" />
@@ -210,8 +215,14 @@ export default function SemesterDetail() {
         </div>
       </div>
 
+      <AnimatePresence>
       {isAdding && (
-        <div className="bg-white p-6 rounded-2xl shadow-sm border border-indigo-200">
+        <motion.div 
+          initial={{ opacity: 0, height: 0, y: -20 }}
+          animate={{ opacity: 1, height: 'auto', y: 0 }}
+          exit={{ opacity: 0, height: 0, y: -20 }}
+          className="bg-white p-6 rounded-2xl shadow-sm border border-indigo-200"
+        >
           <h3 className="text-lg font-bold text-slate-900 mb-4">{editingId ? 'Edit Course' : 'Add New Course'}</h3>
           <form onSubmit={handleSubmit} className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4 items-end">
             <div>
@@ -306,8 +317,9 @@ export default function SemesterDetail() {
               </button>
             </div>
           </form>
-        </div>
+        </motion.div>
       )}
+      </AnimatePresence>
 
       <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
         <div className="overflow-x-auto">
@@ -323,6 +335,7 @@ export default function SemesterDetail() {
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
+              <AnimatePresence>
               {semesterCourses.length === 0 ? (
                 <tr>
                   <td colSpan={6} className="px-6 py-12 text-center text-slate-500">
@@ -330,8 +343,15 @@ export default function SemesterDetail() {
                   </td>
                 </tr>
               ) : (
-                semesterCourses.map((course) => (
-                  <tr key={course.id} className="hover:bg-slate-50 transition-colors">
+                semesterCourses.map((course, index) => (
+                  <motion.tr 
+                    key={course.id} 
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, scale: 0.95 }}
+                    transition={{ delay: index * 0.05 }}
+                    className="hover:bg-slate-50 transition-colors group"
+                  >
                     <td className="px-6 py-4">
                       <div className="flex items-center space-x-2">
                         <span className="font-bold text-slate-900">{course.code}</span>
@@ -360,35 +380,37 @@ export default function SemesterDetail() {
                       {(course.gradePoint * course.units).toFixed(1)}
                     </td>
                     <td className="px-6 py-4 text-right">
-                      <div className="flex items-center justify-end space-x-2">
+                      <div className="flex items-center justify-end space-x-2 opacity-0 group-hover:opacity-100 transition-all">
                         <button
                           onClick={() => setManagingCourseId(course.id)}
-                          className="p-2 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors"
+                          className="p-2 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-transform hover:scale-110"
                           title="Roadmap/Assessments"
                         >
                           <RoadmapIcon className="h-4 w-4" />
                         </button>
                         <button
                           onClick={() => handleEdit(course)}
-                          className="p-2 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors"
+                          className="p-2 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-transform hover:scale-110"
                         >
                           <Edit2 className="h-4 w-4" />
                         </button>
                         <button
                           onClick={() => deleteCourse(course.id)}
-                          className="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                          className="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-transform hover:scale-110"
                         >
                           <Trash2 className="h-4 w-4" />
                         </button>
                       </div>
                     </td>
-                  </tr>
+                  </motion.tr>
                 ))
               )}
+              </AnimatePresence>
             </tbody>
           </table>
         </div>
       </div>
+      <AnimatePresence>
       {isSimulating && (
         <GPASimulator 
           currentCourses={semesterCourses} 
@@ -396,12 +418,15 @@ export default function SemesterDetail() {
           onClose={() => setIsSimulating(false)} 
         />
       )}
+      </AnimatePresence>
+      <AnimatePresence>
       {managingCourseId && (
         <AssessmentManager
           course={semesterCourses.find(c => c.id === managingCourseId)!}
           onClose={() => setManagingCourseId(null)}
         />
       )}
-    </div>
+      </AnimatePresence>
+    </motion.div>
   );
 }

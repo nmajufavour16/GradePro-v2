@@ -1,4 +1,4 @@
-import React, { useRef, useState } from 'react';
+import React, { useState } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { useData } from '../contexts/DataContext';
 import { calculateCGPA, calculateGPA } from '../utils/gpa';
@@ -6,14 +6,14 @@ import { Printer, Download, BookOpen, GraduationCap, Sparkles, Loader2 } from 'l
 import { GradeProLogo } from '../components/GradeProLogo';
 import { GoogleGenAI } from '@google/genai';
 import ReactMarkdown from 'react-markdown';
-import { useReactToPrint } from 'react-to-print';
+import { motion, AnimatePresence } from 'motion/react';
 
 export default function Report() {
   const { profile } = useAuth();
   const { semesters, courses } = useData();
-  const componentRef = useRef<HTMLDivElement>(null);
   const [aiInsights, setAiInsights] = useState<string | null>(null);
   const [isGenerating, setIsGenerating] = useState(false);
+  const [showPrintHint, setShowPrintHint] = useState(false);
 
   const cgpa = calculateCGPA(semesters, courses);
   const totalUnits = courses.reduce((acc, c) => acc + c.units, 0);
@@ -44,7 +44,7 @@ export default function Report() {
       `;
 
       const result = await ai.models.generateContent({
-        model: 'gemini-3-flash-preview',
+        model: 'gemini-3.1-flash',
         contents: [{ role: 'user', parts: [{ text: prompt }] }],
       });
       setAiInsights(result.text || '');
@@ -55,39 +55,67 @@ export default function Report() {
     }
   };
 
-  const handlePrint = useReactToPrint({
-    contentRef: componentRef,
-    documentTitle: `${profile?.displayName?.replace(' ', '_') || 'Student'}_Academic_Report`,
-  });
+  const handlePrint = () => {
+    setShowPrintHint(true);
+    setTimeout(() => setShowPrintHint(false), 8000);
+    try {
+      window.print();
+    } catch (e) {
+      console.error('Print failed:', e);
+      alert('Printing is blocked in this preview. Please open the app in a new tab using the button in the top right corner.');
+    }
+  };
 
   return (
-    <div className="space-y-8">
+    <motion.div 
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      className="space-y-8"
+    >
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 print:hidden">
         <div>
           <h1 className="text-3xl font-bold text-slate-900">Academic Report</h1>
           <p className="text-slate-600 mt-1">Generate and print your official GradePro report.</p>
         </div>
-        <div className="flex items-center gap-3">
-          <button
-            onClick={generateInsights}
-            disabled={isGenerating}
-            className="flex items-center justify-center px-6 py-3 bg-emerald-600 text-white font-medium rounded-xl hover:bg-emerald-700 transition-colors shadow-sm disabled:opacity-50"
-          >
-            {isGenerating ? <Loader2 className="h-5 w-5 mr-2 animate-spin" /> : <Sparkles className="h-5 w-5 mr-2" />}
-            AI Insights
-          </button>
-          <button
-            onClick={() => handlePrint()}
-            className="flex items-center justify-center px-6 py-3 bg-indigo-600 text-white font-medium rounded-xl hover:bg-indigo-700 transition-colors shadow-sm min-w-[200px]"
-          >
-            <Printer className="h-5 w-5 mr-2" />
-            Print / Save PDF
-          </button>
+        <div className="flex flex-col items-end gap-2">
+          <div className="flex items-center gap-3">
+            <motion.button
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
+              onClick={generateInsights}
+              disabled={isGenerating}
+              className="flex items-center justify-center px-6 py-3 bg-emerald-600 text-white font-medium rounded-xl hover:bg-emerald-700 transition-colors shadow-sm disabled:opacity-50"
+            >
+              {isGenerating ? <Loader2 className="h-5 w-5 mr-2 animate-spin" /> : <Sparkles className="h-5 w-5 mr-2" />}
+              AI Insights
+            </motion.button>
+            <motion.button
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
+              onClick={handlePrint}
+              className="flex items-center justify-center px-6 py-3 bg-indigo-600 text-white font-medium rounded-xl hover:bg-indigo-700 transition-colors shadow-sm min-w-[200px]"
+            >
+              <Printer className="h-5 w-5 mr-2" />
+              Print / Save PDF
+            </motion.button>
+          </div>
+          <AnimatePresence>
+            {showPrintHint && (
+              <motion.p 
+                initial={{ opacity: 0, y: -10 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0 }}
+                className="text-sm font-medium text-amber-600 bg-amber-50 px-4 py-2 rounded-xl max-w-sm text-right border border-amber-200 shadow-sm"
+              >
+                If the print dialog doesn't appear, please open the app in a new tab first (arrow icon on the top right).
+              </motion.p>
+            )}
+          </AnimatePresence>
         </div>
       </div>
 
       <div className="bg-white p-8 md:p-12 rounded-2xl shadow-sm border border-slate-200 overflow-x-auto print:p-0 print:border-none print:shadow-none print:m-0">
-        <div ref={componentRef} className="max-w-4xl mx-auto bg-white p-8 print:p-0 print:max-w-none">
+        <div className="max-w-4xl mx-auto bg-white p-8 print:p-0 print:max-w-none">
           {/* Report Header */}
           <div className="flex items-center justify-between border-b-2 border-slate-900 pb-6 mb-8">
             <div className="flex items-center space-x-3">
@@ -141,8 +169,14 @@ export default function Report() {
           </div>
 
           {/* AI Insights Section */}
+          <AnimatePresence>
           {aiInsights && (
-            <div className="mb-12 p-6 bg-emerald-50 rounded-2xl border border-emerald-100 break-inside-avoid">
+            <motion.div 
+              initial={{ height: 0, opacity: 0 }}
+              animate={{ height: 'auto', opacity: 1 }}
+              exit={{ height: 0, opacity: 0 }}
+              className="mb-12 p-6 bg-emerald-50 rounded-2xl border border-emerald-100 break-inside-avoid overflow-hidden"
+            >
               <div className="flex items-center space-x-2 mb-4">
                 <Sparkles className="h-5 w-5 text-emerald-600" />
                 <h3 className="text-lg font-bold text-emerald-900">AI Performance Insights</h3>
@@ -150,8 +184,9 @@ export default function Report() {
               <div className="prose prose-sm max-w-none prose-emerald">
                 <ReactMarkdown>{aiInsights}</ReactMarkdown>
               </div>
-            </div>
+            </motion.div>
           )}
+          </AnimatePresence>
 
           {/* Semester Breakdown */}
           <div className="space-y-10">
@@ -214,6 +249,6 @@ export default function Report() {
           </div>
         </div>
       </div>
-    </div>
+    </motion.div>
   );
 }

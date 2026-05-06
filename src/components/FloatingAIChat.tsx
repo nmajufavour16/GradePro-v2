@@ -204,7 +204,7 @@ export default function FloatingAIChat() {
 
       // Get AI response
       const response = await ai.models.generateContent({
-        model: 'gemini-3-flash-preview',
+        model: 'gemini-3.1-flash',
         contents: historyContents,
         config: {
           systemInstruction: context,
@@ -227,7 +227,7 @@ export default function FloatingAIChat() {
       const session = sessions.find(s => s.id === currentSessionId);
       if (session && (session.title === 'New Chat' || messages.length === 0)) {
         const titleResponse = await ai.models.generateContent({
-          model: 'gemini-3-flash-preview',
+          model: 'gemini-3.1-flash',
           contents: [{ role: 'user', parts: [{ text: `Generate a very short, 3-5 word title for a chat that starts with this question: "${userMessage}". Output ONLY the title.` }] }]
         });
         const newTitle = titleResponse.text?.trim().replace(/^"|"$/g, '') || userMessage.substring(0, 30);

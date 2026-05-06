@@ -6,6 +6,7 @@ import { calculateCGPA } from '../utils/gpa';
 import { generateCurriculum } from '../utils/ai';
 import { Plus, Trash2, ChevronRight, BookOpen, Sparkles, Loader2 as LoaderIcon, FileUp } from 'lucide-react';
 import TranscriptScanner from '../components/TranscriptScanner';
+import { motion, AnimatePresence } from 'motion/react';
 
 export default function Semesters() {
   const { user, profile } = useAuth();
@@ -45,7 +46,11 @@ export default function Semesters() {
   };
 
   return (
-    <div className="space-y-8">
+    <motion.div 
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      className="space-y-8"
+    >
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <h1 className="text-3xl font-bold text-slate-900">Semesters</h1>
@@ -54,14 +59,14 @@ export default function Semesters() {
         <div className="flex flex-wrap gap-3">
           <button
             onClick={() => setIsScanning(true)}
-            className="flex items-center justify-center px-4 py-2 bg-white text-indigo-600 border border-indigo-200 font-medium rounded-xl hover:bg-slate-50 transition-colors shadow-sm"
+            className="flex items-center justify-center px-4 py-2 bg-white text-indigo-600 border border-indigo-200 font-medium rounded-xl hover:bg-slate-50 transition-all shadow-sm hover:scale-105 active:scale-95"
           >
             <FileUp className="h-5 w-5 mr-2" />
             AI Scanner
           </button>
           <button
             onClick={() => setIsAdding(true)}
-            className="flex items-center justify-center px-4 py-2 bg-indigo-600 text-white font-medium rounded-xl hover:bg-indigo-700 transition-colors shadow-sm"
+            className="flex items-center justify-center px-4 py-2 bg-indigo-600 text-white font-medium rounded-xl hover:bg-indigo-700 transition-all shadow-sm hover:scale-105 active:scale-95"
           >
             <Plus className="h-5 w-5 mr-2" />
             Add Semester
@@ -71,15 +76,21 @@ export default function Semesters() {
 
       {isScanning && <TranscriptScanner onClose={() => setIsScanning(false)} />}
 
+      <AnimatePresence>
       {isAdding && (
-        <div className="bg-white p-6 rounded-2xl shadow-sm border border-indigo-100">
+        <motion.div 
+          initial={{ opacity: 0, height: 0, y: -20 }}
+          animate={{ opacity: 1, height: 'auto', y: 0 }}
+          exit={{ opacity: 0, height: 0, y: -20 }}
+          className="bg-white p-6 rounded-2xl shadow-sm border border-indigo-100"
+        >
           <form onSubmit={handleAdd} className="flex flex-col sm:flex-row gap-4 items-end">
             <div className="flex-1 w-full">
               <label className="block text-sm font-medium text-slate-700 mb-1">Level</label>
               <select
                 value={level}
                 onChange={(e) => setLevel(e.target.value)}
-                className="w-full px-4 py-2 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none"
+                className="w-full px-4 py-2 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-all"
               >
                 {['100L', '200L', '300L', '400L', '500L', '600L'].map(l => (
                   <option key={l} value={l}>{l}</option>
@@ -91,7 +102,7 @@ export default function Semesters() {
               <select
                 value={name}
                 onChange={(e) => setName(e.target.value)}
-                className="w-full px-4 py-2 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none"
+                className="w-full px-4 py-2 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-all"
               >
                 {['First Semester', 'Second Semester', 'Summer'].map(n => (
                   <option key={n} value={n}>{n}</option>
@@ -111,7 +122,7 @@ export default function Semesters() {
                 type="button"
                 onClick={handleAutoGenerate}
                 disabled={isGenerating || !profile?.department}
-                className="flex-1 px-4 py-2 bg-slate-50 text-indigo-600 font-medium rounded-xl hover:bg-slate-100 border border-indigo-200 transition-colors shadow-sm disabled:opacity-50 flex items-center justify-center min-w-[140px]"
+                className="flex-1 px-4 py-2 bg-slate-50 text-indigo-600 font-medium rounded-xl hover:bg-slate-100 border border-indigo-200 transition-all shadow-sm active:scale-95 disabled:opacity-50 flex items-center justify-center min-w-[140px]"
                 title={!profile?.department ? 'Please set your department in profile first' : ''}
               >
                 {isGenerating ? (
@@ -124,37 +135,51 @@ export default function Semesters() {
               <button
                 type="submit"
                 disabled={isGenerating}
-                className="flex-1 px-4 py-2 bg-indigo-600 text-white font-medium rounded-xl hover:bg-indigo-700 transition-colors disabled:opacity-50"
+                className="flex-1 px-4 py-2 bg-indigo-600 text-white font-medium rounded-xl hover:bg-indigo-700 transition-all active:scale-95 disabled:opacity-50"
               >
                 Save
               </button>
             </div>
           </form>
-        </div>
+        </motion.div>
       )}
+      </AnimatePresence>
 
       {semesters.length === 0 && !isAdding ? (
-        <div className="text-center py-16 bg-white rounded-2xl border border-slate-200 border-dashed">
+        <motion.div 
+          initial={{ opacity: 0, scale: 0.95 }}
+          animate={{ opacity: 1, scale: 1 }}
+          className="text-center py-16 bg-white rounded-2xl border border-slate-200 border-dashed"
+        >
           <BookOpen className="mx-auto h-12 w-12 text-slate-300 mb-4" />
           <h3 className="text-lg font-medium text-slate-900">No semesters yet</h3>
           <p className="mt-1 text-slate-500">Get started by adding your first semester.</p>
-        </div>
+        </motion.div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {semesters.map((semester) => {
+          <AnimatePresence>
+          {semesters.map((semester, index) => {
             const semesterCourses = courses.filter(c => c.semesterId === semester.id);
             const gpa = calculateCGPA([semester], semesterCourses);
             const totalUnits = semesterCourses.reduce((acc, c) => acc + c.units, 0);
 
             return (
-              <div key={semester.id} className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden hover:shadow-md transition-shadow group">
-                <div className="p-6">
+              <motion.div 
+                key={semester.id} 
+                initial={{ opacity: 0, scale: 0.9 }}
+                animate={{ opacity: 1, scale: 1 }}
+                exit={{ opacity: 0, scale: 0.9 }}
+                transition={{ delay: index * 0.1 }}
+                whileHover={{ y: -5 }}
+                className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden hover:shadow-xl hover:border-indigo-200 transition-all group flex flex-col"
+              >
+                <div className="p-6 flex-1">
                   <div className="flex justify-between items-start mb-4">
                     <div>
                       <span className="inline-block px-3 py-1 bg-indigo-50 text-indigo-700 text-xs font-semibold rounded-full mb-2">
                         {semester.level}
                       </span>
-                      <h3 className="text-xl font-bold text-slate-900">{semester.name}</h3>
+                      <h3 className="text-xl font-bold text-slate-900 group-hover:text-indigo-600 transition-colors">{semester.name}</h3>
                     </div>
                     <button
                       onClick={() => deleteSemester(semester.id)}
@@ -179,20 +204,21 @@ export default function Semesters() {
                     </div>
                   </div>
                 </div>
-                <div className="bg-slate-50 px-6 py-4 border-t border-slate-100">
+                <div className="bg-slate-50 px-6 py-4 border-t border-slate-100 group-hover:bg-indigo-50/50 transition-colors">
                   <Link
                     to={`/semesters/${semester.id}`}
-                    className="flex items-center justify-between text-indigo-600 font-medium hover:text-indigo-700 group-hover:translate-x-1 transition-transform"
+                    className="flex items-center justify-between text-indigo-600 font-medium hover:text-indigo-700 transition-colors relative"
                   >
                     View Courses
-                    <ChevronRight className="h-5 w-5" />
+                    <ChevronRight className="h-5 w-5 transform group-hover:translate-x-1 transition-transform" />
                   </Link>
                 </div>
-              </div>
+              </motion.div>
             );
           })}
+          </AnimatePresence>
         </div>
       )}
-    </div>
+    </motion.div>
   );
 }

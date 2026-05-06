@@ -65,7 +65,7 @@ export default function Dashboard() {
       `;
 
       const result = await ai.models.generateContent({
-        model: 'gemini-3.1-pro-preview',
+        model: 'gemini-3.1-flash',
         contents: [{ role: 'user', parts: [{ text: prompt }] }],
       });
       setAiInsight(result.text || '');
@@ -90,22 +90,22 @@ export default function Dashboard() {
         animate={{ opacity: 1, y: 0 }}
         className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6"
       >
-        <motion.div initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} transition={{ delay: 0.1 }} id="tour-cgpa" className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 flex flex-col">
+        <motion.div initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} transition={{ delay: 0.1 }} whileHover={{ y: -5 }} id="tour-cgpa" className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 flex flex-col hover:shadow-lg transition-all group">
           <div className="flex items-center justify-between mb-4">
-            <h3 className="text-sm font-medium text-slate-500 uppercase tracking-wider">Current CGPA</h3>
-            <div className="p-2 bg-indigo-50 rounded-lg">
-              <GraduationCap className="h-5 w-5 text-indigo-600" />
+            <h3 className="text-sm font-medium text-slate-500 uppercase tracking-wider group-hover:text-indigo-600 transition-colors">Current CGPA</h3>
+            <div className="p-2 bg-indigo-50 rounded-lg group-hover:bg-indigo-100 transition-colors">
+              <GraduationCap className="h-5 w-5 text-indigo-600 group-hover:scale-110 transition-transform" />
             </div>
           </div>
-          <div className="text-4xl font-bold text-slate-900">{cgpa.toFixed(2)}</div>
+          <div className="text-4xl font-bold text-slate-900 group-hover:text-indigo-700 transition-colors">{cgpa.toFixed(2)}</div>
           <p className="text-sm text-slate-500 mt-2">Out of {profile?.gradingScale || 5.0}</p>
         </motion.div>
 
-        <motion.div initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} transition={{ delay: 0.2 }} id="tour-target" className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 flex flex-col">
+        <motion.div initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} transition={{ delay: 0.2 }} whileHover={{ y: -5 }} id="tour-target" className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 flex flex-col hover:shadow-lg transition-all group">
           <div className="flex items-center justify-between mb-4">
-            <h3 className="text-sm font-medium text-slate-500 uppercase tracking-wider">Target CGPA</h3>
-            <div className="p-2 bg-emerald-50 rounded-lg">
-              <Target className="h-5 w-5 text-emerald-600" />
+            <h3 className="text-sm font-medium text-slate-500 uppercase tracking-wider group-hover:text-emerald-600 transition-colors">Target CGPA</h3>
+            <div className="p-2 bg-emerald-50 rounded-lg group-hover:bg-emerald-100 transition-colors">
+              <Target className="h-5 w-5 text-emerald-600 group-hover:scale-110 transition-transform" />
             </div>
           </div>
           <div className="flex items-center space-x-2">
@@ -138,25 +138,25 @@ export default function Dashboard() {
           </p>
         </motion.div>
 
-        <motion.div initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} transition={{ delay: 0.3 }} className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 flex flex-col">
+        <motion.div initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} transition={{ delay: 0.3 }} whileHover={{ y: -5 }} className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 flex flex-col hover:shadow-lg transition-all group">
           <div className="flex items-center justify-between mb-4">
-            <h3 className="text-sm font-medium text-slate-500 uppercase tracking-wider">Total Units</h3>
-            <div className="p-2 bg-amber-50 rounded-lg">
-              <BookOpen className="h-5 w-5 text-amber-600" />
+            <h3 className="text-sm font-medium text-slate-500 uppercase tracking-wider group-hover:text-amber-600 transition-colors">Total Units</h3>
+            <div className="p-2 bg-amber-50 rounded-lg group-hover:bg-amber-100 transition-colors">
+              <BookOpen className="h-5 w-5 text-amber-600 group-hover:scale-110 transition-transform" />
             </div>
           </div>
-          <div className="text-4xl font-bold text-slate-900">{totalUnits}</div>
+          <div className="text-4xl font-bold text-slate-900 group-hover:text-amber-700 transition-colors">{totalUnits}</div>
           <p className="text-sm text-slate-500 mt-2">Completed units</p>
         </motion.div>
 
-        <motion.div initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} transition={{ delay: 0.4 }} className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 flex flex-col">
+        <motion.div initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} transition={{ delay: 0.4 }} whileHover={{ y: -5 }} className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 flex flex-col hover:shadow-lg transition-all group">
           <div className="flex items-center justify-between mb-4">
-            <h3 className="text-sm font-medium text-slate-500 uppercase tracking-wider">Semesters</h3>
-            <div className="p-2 bg-blue-50 rounded-lg">
-              <TrendingUp className="h-5 w-5 text-blue-600" />
+            <h3 className="text-sm font-medium text-slate-500 uppercase tracking-wider group-hover:text-blue-600 transition-colors">Semesters</h3>
+            <div className="p-2 bg-blue-50 rounded-lg group-hover:bg-blue-100 transition-colors">
+              <TrendingUp className="h-5 w-5 text-blue-600 group-hover:scale-110 transition-transform" />
             </div>
           </div>
-          <div className="text-4xl font-bold text-slate-900">{semesters.length}</div>
+          <div className="text-4xl font-bold text-slate-900 group-hover:text-blue-700 transition-colors">{semesters.length}</div>
           <p className="text-sm text-slate-500 mt-2">Recorded semesters</p>
         </motion.div>
       </motion.div>

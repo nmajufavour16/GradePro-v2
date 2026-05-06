@@ -6,6 +6,7 @@ import { db } from '@/src/firebase';
 import { AppMetadata } from '@/src/types';
 import { BookOpen, Loader2, Sparkles } from 'lucide-react';
 import { generateCurriculum } from '@/src/utils/ai';
+import { motion } from 'motion/react';
 
 export default function Onboarding() {
   const { user, profile, updateProfile } = useAuth();
@@ -50,7 +51,11 @@ export default function Onboarding() {
   };
 
   return (
-    <div className="min-h-screen bg-slate-50 flex flex-col justify-center py-12 sm:px-6 lg:px-8">
+    <motion.div 
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      className="min-h-screen bg-slate-50 flex flex-col justify-center py-12 sm:px-6 lg:px-8"
+    >
       <div className="sm:mx-auto sm:w-full sm:max-w-md">
         <div className="flex justify-center">
           <BookOpen className="h-12 w-12 text-indigo-600" />
@@ -176,6 +181,6 @@ export default function Onboarding() {
           </form>
         </div>
       </div>
-    </div>
+    </motion.div>
   );
 }

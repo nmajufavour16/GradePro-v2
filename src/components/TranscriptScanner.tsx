@@ -23,7 +23,13 @@ export default function TranscriptScanner({ onClose }: TranscriptScannerProps) {
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
-      setFile(e.target.files[0]);
+      const selectedFile = e.target.files[0];
+      if (selectedFile.size > 5 * 1024 * 1024) {
+        setError('File is too large. Please select a file under 5MB.');
+        e.target.value = '';
+        return;
+      }
+      setFile(selectedFile);
       setError(null);
     }
   };
@@ -52,7 +58,7 @@ export default function TranscriptScanner({ onClose }: TranscriptScannerProps) {
       }
     } catch (err) {
       console.error(err);
-      setError("Failed to scan transcript. Please ensure it's a clear image or PDF.");
+      setError("Failed to scan transcript. If you attached an image/PDF, it might be too large or unclear. Please try again with a clear file under 5MB.");
     } finally {
       setIsScanning(false);
     }

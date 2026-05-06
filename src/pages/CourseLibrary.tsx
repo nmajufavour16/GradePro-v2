@@ -96,7 +96,7 @@ export default function CourseLibrary() {
         Use clear headings and professional yet encouraging tone. Use markdown.
       `;
       const result = await ai.models.generateContent({
-        model: 'gemini-3.1-pro-preview',
+        model: 'gemini-3.1-pro',
         contents: [{ role: 'user', parts: [{ text: prompt }] }],
       });
       setAiTips(result.text || '');
@@ -196,7 +196,11 @@ export default function CourseLibrary() {
   );
 
   return (
-    <div className="space-y-8">
+    <motion.div 
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      className="space-y-8"
+    >
       <div className="bg-gradient-to-br from-indigo-600 to-indigo-800 p-8 md:p-12 rounded-[2.5rem] text-white shadow-xl relative overflow-hidden">
         <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-6">
           <div className="max-w-xl">
@@ -637,6 +641,6 @@ export default function CourseLibrary() {
           </div>
         )}
       </AnimatePresence>
-    </div>
+    </motion.div>
   );
 }

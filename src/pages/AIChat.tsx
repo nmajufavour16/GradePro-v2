@@ -124,6 +124,11 @@ export default function AIChat() {
   const handleImageSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
+      if (file.size > 5 * 1024 * 1024) {
+        alert('Image is too large. Please select an image under 5MB.');
+        e.target.value = '';
+        return;
+      }
       const reader = new FileReader();
       reader.onloadend = () => {
         setSelectedImage(reader.result as string);
@@ -223,7 +228,7 @@ export default function AIChat() {
       });
 
       // Select model based on input
-      const modelName = (currentImage || currentThinking) ? 'gemini-3.1-pro-preview' : 'gemini-3-flash-preview';
+      const modelName = (currentImage || currentThinking) ? 'gemini-3.1-pro' : 'gemini-3.1-flash';
       const config: any = {
         systemInstruction: context,
         maxOutputTokens: 4096,
@@ -255,7 +260,7 @@ export default function AIChat() {
       const session = sessions.find(s => s.id === currentSessionId);
       if (session && (session.title === 'New Chat' || messages.length === 0)) {
         const titleResponse = await ai.models.generateContent({
-          model: 'gemini-3.1-flash-lite-preview',
+          model: 'gemini-3.1-flash',
           contents: [{ role: 'user', parts: [{ text: `Generate a very short, 3-5 word title for a chat that starts with this: "${userMessage || 'Image Analysis'}". Output ONLY the title.` }] }]
         });
         const newTitle = titleResponse.text?.trim().replace(/^"|"$/g, '') || (userMessage ? userMessage.substring(0, 30) : 'Image Analysis');
@@ -276,7 +281,7 @@ export default function AIChat() {
           chatId: currentSessionId,
           userId: user.uid,
           role: 'assistant',
-          content: 'Sorry, I encountered an error. Please try again later.',
+          content: 'Sorry, I encountered an error. If you attached an image, it might be too large or not in a supported format. Please try again with a smaller image or just text.',
           createdAt: new Date().toISOString()
         });
       }
