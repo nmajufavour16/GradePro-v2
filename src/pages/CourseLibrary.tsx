@@ -96,7 +96,7 @@ export default function CourseLibrary() {
         Use clear headings and professional yet encouraging tone. Use markdown.
       `;
       const result = await ai.models.generateContent({
-        model: 'gemini-3.1-pro-preview',
+        model: 'gemini-2.5-pro',
         contents: [{ role: 'user', parts: [{ text: prompt }] }],
       });
       setAiTips(result.text || '');

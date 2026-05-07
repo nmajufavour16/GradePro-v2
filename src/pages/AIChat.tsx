@@ -4,7 +4,7 @@ import { db } from '@/src/firebase';
 import { useAuth } from '@/src/contexts/AuthContext';
 import { useData } from '@/src/contexts/DataContext';
 import { calculateCGPA } from '@/src/utils/gpa';
-import { GoogleGenAI, ThinkingLevel } from '@google/genai';
+import { GoogleGenAI } from '@google/genai';
 import ReactMarkdown from 'react-markdown';
 import { MessageCircle, Send, Loader2, Sparkles, Plus, Trash2, History, X, Menu, ChevronLeft, ChevronRight, Image as ImageIcon, Brain } from 'lucide-react';
 import { ChatSession, ChatMessage } from '@/src/types';
@@ -156,7 +156,18 @@ export default function AIChat() {
           ctx?.drawImage(img, 0, 0, width, height);
           
           // Use JPEG with 0.7 quality to ensure small file size
-          const resizedBase64 = canvas.toDataURL('image/jpeg', 0.7);
+          let resizedBase64 = canvas.toDataURL('image/jpeg', 0.7);
+          
+          // Sanity check: if base64 string is still too large (> 700KB), compress further
+          if (resizedBase64.length > 700000) {
+            resizedBase64 = canvas.toDataURL('image/jpeg', 0.4);
+          }
+          
+          if (resizedBase64.length > 900000) {
+             alert('Image is too complex/large to process safely. Please use a simpler image.');
+             return;
+          }
+
           setSelectedImage(resizedBase64);
         };
         img.src = reader.result as string;
@@ -256,15 +267,11 @@ export default function AIChat() {
       });
 
       // Select model based on input
-      const modelName = (currentImage || currentThinking) ? 'gemini-3.1-pro-preview' : 'gemini-3-flash-preview';
+      const modelName = (currentImage || currentThinking) ? 'gemini-2.5-pro' : 'gemini-2.5-flash';
       const config: any = {
         systemInstruction: context,
         maxOutputTokens: 4096,
       };
-
-      if (currentThinking) {
-        config.thinkingConfig = { thinkingLevel: ThinkingLevel.HIGH };
-      }
 
       // Get AI response
       const response = await ai.models.generateContent({
@@ -288,7 +295,7 @@ export default function AIChat() {
       const session = sessions.find(s => s.id === currentSessionId);
       if (session && (session.title === 'New Chat' || messages.length === 0)) {
         const titleResponse = await ai.models.generateContent({
-          model: 'gemini-3-flash-preview',
+          model: 'gemini-2.5-flash',
           contents: [{ role: 'user', parts: [{ text: `Generate a very short, 3-5 word title for a chat that starts with this: "${userMessage || 'Image Analysis'}". Output ONLY the title.` }] }]
         });
         const newTitle = titleResponse.text?.trim().replace(/^"|"$/g, '') || (userMessage ? userMessage.substring(0, 30) : 'Image Analysis');

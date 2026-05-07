@@ -28,7 +28,7 @@ export async function generateCurriculum(institution: string, department: string
     `;
 
     const response = await ai.models.generateContent({
-      model: 'gemini-3-flash-preview',
+      model: 'gemini-2.5-flash',
       contents: [{ role: 'user', parts: [{ text: prompt }] }],
     });
     
@@ -85,7 +85,7 @@ export async function generateCoursesForSemester(institution: string, department
     `;
 
     const response = await ai.models.generateContent({
-      model: 'gemini-3-flash-preview',
+      model: 'gemini-2.5-flash',
       contents: [{ role: 'user', parts: [{ text: prompt }] }],
     });
     
@@ -148,7 +148,7 @@ export async function scanTranscript(fileBase64: string, mimeType: string) {
     `;
 
     const response = await ai.models.generateContent({
-      model: 'gemini-3.1-pro-preview',
+      model: 'gemini-2.5-pro',
       contents: [
         {
           role: 'user',
