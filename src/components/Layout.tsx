@@ -28,7 +28,7 @@ export default function Layout() {
   };
 
   return (
-    <div className="min-h-screen bg-slate-50 flex flex-col md:flex-row w-full overflow-hidden print:bg-white print:block">
+    <div className="h-[100dvh] bg-slate-50 flex flex-col md:flex-row w-full overflow-hidden print:bg-white print:block">
       {/* Mobile Header */}
       <div className="md:hidden flex items-center justify-between p-4 bg-white border-b border-slate-200 print:hidden">
         <GradeProLogo className="h-8" />
@@ -137,8 +137,8 @@ export default function Layout() {
       </div>
 
       {/* Main Content */}
-      <main className="flex-1 min-w-0 overflow-y-auto print:overflow-visible">
-        <div className={`mx-auto h-full print:p-0 print:max-w-none ${location.pathname === '/ai-chat' ? 'p-0 max-w-none' : 'p-4 md:p-8 max-w-7xl'}`}>
+      <main className="flex-1 min-w-0 overflow-y-auto print:overflow-visible relative">
+        <div className={`mx-auto print:p-0 print:max-w-none ${location.pathname === '/ai-chat' ? 'h-full p-0 max-w-none' : 'min-h-full p-4 md:p-8 max-w-7xl'}`}>
           <Outlet />
         </div>
       </main>

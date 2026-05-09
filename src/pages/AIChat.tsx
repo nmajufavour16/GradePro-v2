@@ -326,7 +326,7 @@ export default function AIChat() {
   };
 
   return (
-    <div className="h-full min-h-[calc(100vh-4rem)] md:min-h-screen flex flex-col md:flex-row bg-white relative">
+    <div className="h-full flex flex-col md:flex-row bg-white relative overflow-hidden">
       {/* Sidebar - Chat History */}
       <div className={`
         fixed inset-0 z-40 bg-slate-900/20 backdrop-blur-sm transition-opacity md:hidden
