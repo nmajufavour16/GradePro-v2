@@ -6,6 +6,8 @@ import FloatingAIChat from './FloatingAIChat';
 import UserTour from './UserTour';
 import { GradeProLogo } from './GradeProLogo';
 
+import InstallPrompt from './InstallPrompt';
+
 export default function Layout() {
   const { user, profile, logout } = useAuth();
   const location = useLocation();
@@ -145,6 +147,7 @@ export default function Layout() {
       <div className="print:hidden">
         <FloatingAIChat />
         <UserTour />
+        <InstallPrompt />
       </div>
     </div>
   );

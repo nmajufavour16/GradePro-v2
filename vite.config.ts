@@ -12,7 +12,7 @@ export default defineConfig(({mode}) => {
       tailwindcss(),
       VitePWA({
         registerType: 'autoUpdate',
-        includeAssets: ['logo.png', 'logo.svg'],
+        includeAssets: ['favicon.svg', 'favicon.ico', 'apple-touch-icon.png', 'logo.svg'],
         workbox: {
           maximumFileSizeToCacheInBytes: 5 * 1024 * 1024, // 5MB
         },
@@ -25,13 +25,17 @@ export default defineConfig(({mode}) => {
           display: 'standalone',
           icons: [
             {
-              src: 'logo.png',
+              src: 'pwa-192x192.png',
               sizes: '192x192',
-              type: 'image/png',
-              purpose: 'any maskable'
+              type: 'image/png'
             },
             {
-              src: 'logo.png',
+              src: 'pwa-512x512.png',
+              sizes: '512x512',
+              type: 'image/png'
+            },
+            {
+              src: 'pwa-512x512.png',
               sizes: '512x512',
               type: 'image/png',
               purpose: 'any maskable'
