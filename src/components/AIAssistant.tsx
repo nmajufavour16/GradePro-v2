@@ -79,7 +79,7 @@ export default function AIAssistant() {
       setMessages(prev => [...prev, { role: 'assistant', content: response.text || 'I am not sure how to respond to that.' }]);
     } catch (error) {
       console.error('AI Error:', error);
-      setMessages(prev => [...prev, { role: 'assistant', content: 'Sorry, I encountered an error. Please try again later.' }]);
+      setMessages(prev => [...prev, { role: 'assistant', content: `Sorry, I encountered an error. Please try again later. Error: ${error instanceof Error ? error.message : String(error)}` }]);
     } finally {
       setIsLoading(false);
     }

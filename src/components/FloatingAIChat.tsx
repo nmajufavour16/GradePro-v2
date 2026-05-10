@@ -249,7 +249,7 @@ export default function FloatingAIChat() {
           chatId: currentSessionId,
           userId: user.uid,
           role: 'assistant',
-          content: 'Sorry, I encountered an error. Please try again later.',
+          content: `Sorry, I encountered an error. Please try again later. Error: ${error instanceof Error ? error.message : String(error)}`,
           createdAt: new Date().toISOString()
         });
       }

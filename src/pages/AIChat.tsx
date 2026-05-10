@@ -316,7 +316,7 @@ export default function AIChat() {
           chatId: currentSessionId,
           userId: user.uid,
           role: 'assistant',
-          content: 'Sorry, I encountered an error. If you attached an image, it might be too large or not in a supported format. Please try again with a smaller image or just text.',
+          content: `Sorry, I encountered an error. If you attached an image, it might be too large or not in a supported format. Please try again with a smaller image or just text. Error details: ${error instanceof Error ? error.message : String(error)}`,
           createdAt: new Date().toISOString()
         });
       }
