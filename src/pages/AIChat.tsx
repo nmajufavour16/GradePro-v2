@@ -267,7 +267,7 @@ export default function AIChat() {
       });
 
       // Select model based on input
-      const modelName = (currentImage || currentThinking) ? 'gemini-2.5-pro' : 'gemini-2.5-flash';
+      const modelName = 'gemini-2.5-flash'; // Both vision and text work fine on flash, less likely to hit quota or permission issues
       const config: any = {
         systemInstruction: context,
         maxOutputTokens: 4096,

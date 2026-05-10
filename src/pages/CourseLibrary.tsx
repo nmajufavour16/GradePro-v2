@@ -2,7 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { CourseReview, AppMetadata, CourseMaterial, CommunityCourse } from '../types';
 import { collection, query, where, onSnapshot, addDoc, doc, getDoc, orderBy, serverTimestamp, updateDoc, deleteDoc } from 'firebase/firestore';
-import { db } from '../firebase';
+import { ref, uploadBytesResumable, getDownloadURL } from 'firebase/storage';
+import { db, storage } from '../firebase';
 import { handleFirestoreError } from '../utils/firebaseErrors';
 import { OperationType } from '../types';
 import { Search, Star, MessageSquare, Info, Sparkles, Filter, Users, BookOpen, Plus, ExternalLink, FileText, Download, Trash2, X, PlusCircle, LayoutGrid, List, TrendingUp, Settings, Edit2 } from 'lucide-react';
@@ -41,6 +42,9 @@ export default function CourseLibrary() {
     url: '',
     description: ''
   });
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [uploadProgress, setUploadProgress] = useState(0);
+  const [isUploading, setIsUploading] = useState(false);
 
   const [courseForm, setCourseForm] = useState({
     code: '',
@@ -83,8 +87,9 @@ export default function CourseLibrary() {
 
   const generateAITips = async (courseCode: string) => {
     setIsGeneratingTips(true);
+    setAiTips(null);
     try {
-      const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
+      const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY as string });
       const prompt = `
         Provide a comprehensive "Performance Optimization Guide" for the university course code "${courseCode}".
         Include:
@@ -96,12 +101,13 @@ export default function CourseLibrary() {
         Use clear headings and professional yet encouraging tone. Use markdown.
       `;
       const result = await ai.models.generateContent({
-        model: 'gemini-2.5-pro',
-        contents: [{ role: 'user', parts: [{ text: prompt }] }],
+        model: 'gemini-2.5-flash',
+        contents: prompt,
       });
       setAiTips(result.text || '');
-    } catch (err) {
-      console.error(err);
+    } catch (err: any) {
+      console.error("AI Tips Error:", err);
+      setAiTips(`**Error generating AI Study Plan:** ${err.message || String(err)}`);
     } finally {
       setIsGeneratingTips(false);
     }
@@ -126,9 +132,45 @@ export default function CourseLibrary() {
 
   const handleAddMaterial = async () => {
     if (!selectedCourse || !user) return;
+    
+    // If a URL is manually provided, use that, else if file upload is done, use that
+    if (!materialForm.url && !selectedFile) {
+      alert("Please provide a URL or upload a file.");
+      return;
+    }
+
     try {
+      setIsUploading(true);
+      let fileUrl = materialForm.url;
+
+      if (selectedFile) {
+        // Upload file to Firebase Storage
+        const fileRef = ref(storage, `courseMaterials/${selectedCourse}/${Date.now()}_${selectedFile.name}`);
+        const uploadTask = uploadBytesResumable(fileRef, selectedFile);
+
+        await new Promise((resolve, reject) => {
+          uploadTask.on(
+            'state_changed',
+            (snapshot) => {
+              const progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
+              setUploadProgress(progress);
+            },
+            (error) => {
+              console.error('Upload failed:', error);
+              reject(error);
+            },
+            async () => {
+              const downloadURL = await getDownloadURL(uploadTask.snapshot.ref);
+              fileUrl = downloadURL;
+              resolve(null);
+            }
+          );
+        });
+      }
+
       await addDoc(collection(db, 'courseMaterials'), {
         ...materialForm,
+        url: fileUrl,
         courseCode: selectedCourse,
         userId: user.uid,
         userName: profile?.displayName || 'GradePro User',
@@ -136,8 +178,17 @@ export default function CourseLibrary() {
       });
       setIsAddingMaterial(false);
       setMaterialForm({ title: '', type: 'Note', url: '', description: '' });
-    } catch (err) {
-      handleFirestoreError(err, OperationType.CREATE, 'courseMaterials');
+      setSelectedFile(null);
+      setUploadProgress(0);
+    } catch (err: any) {
+      console.error(err);
+      if (err.message && err.message.includes('unauthorized')) {
+        alert("Upload failed. Firebase Storage rules might restrict uploads. Please check your Firebase Storage security rules.");
+      } else {
+        handleFirestoreError(err, OperationType.CREATE, 'courseMaterials');
+      }
+    } finally {
+      setIsUploading(false);
     }
   };
 
@@ -611,21 +662,53 @@ export default function CourseLibrary() {
                       </select>
                     </div>
                     <div>
-                      <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest block mb-2">URL (Drive, Cloud, etc.)</label>
+                      <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest block mb-2">URL or Upload File</label>
                       <input 
-                        className="w-full px-5 py-4 bg-slate-50 border border-slate-100 rounded-2xl focus:ring-2 focus:ring-indigo-500 outline-none text-indigo-600 font-bold"
+                        className="w-full px-5 py-4 bg-slate-50 border border-slate-100 rounded-2xl focus:ring-2 focus:ring-indigo-500 outline-none text-indigo-600 font-bold mb-2"
                         placeholder="https://drive.google.com/..."
                         value={materialForm.url}
                         onChange={e => setMaterialForm({...materialForm, url: e.target.value})}
+                        disabled={!!selectedFile}
                       />
+                      <div className="flex items-center space-x-2">
+                        <span className="text-xs text-slate-400 flex-shrink-0">OR</span>
+                        <div className="relative w-full">
+                          <input 
+                            type="file" 
+                            accept=".pdf,.doc,.docx"
+                            className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                            onChange={(e) => {
+                              if (e.target.files && e.target.files[0]) {
+                                setSelectedFile(e.target.files[0]);
+                                setMaterialForm({...materialForm, url: ''}); // Clear URL if file selected
+                              }
+                            }}
+                            disabled={!!materialForm.url}
+                          />
+                          <div className={`w-full px-5 py-4 bg-slate-50 border border-slate-100 rounded-2xl focus:ring-2 focus:ring-indigo-500 text-xs font-bold ${materialForm.url ? 'opacity-50' : ''}`}>
+                            {selectedFile ? selectedFile.name : 'Click to Browse (PDF, DOC)'}
+                          </div>
+                        </div>
+                        {selectedFile && (
+                          <button onClick={() => setSelectedFile(null)} className="p-2 text-rose-500 hover:bg-rose-50 rounded-full">
+                            <X className="w-4 h-4" />
+                          </button>
+                        )}
+                      </div>
+                      
+                      {uploadProgress > 0 && selectedFile && (
+                        <div className="mt-4 h-2 bg-slate-100 rounded-full overflow-hidden">
+                          <div className="h-full bg-indigo-600 transition-all duration-300" style={{ width: `${uploadProgress}%` }} />
+                        </div>
+                      )}
                     </div>
                   </div>
                   <button 
                   onClick={handleAddMaterial}
-                  disabled={!materialForm.title || !materialForm.url}
+                  disabled={!materialForm.title || (!materialForm.url && !selectedFile) || isUploading}
                   className="w-full py-5 bg-rose-600 text-white font-bold rounded-3xl hover:bg-rose-700 transition-all shadow-xl shadow-rose-100 active:scale-95 disabled:opacity-50 mt-4"
                 >
-                  Share Repository
+                  {isUploading ? `Uploading... ${Math.round(uploadProgress)}%` : 'Share Repository'}
                 </button>
                 </div>
              </motion.div>
