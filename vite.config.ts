@@ -10,16 +10,6 @@ export default defineConfig(({mode}) => {
     plugins: [
       react(), 
       tailwindcss(),
-      {
-        name: 'html-transform',
-        apply: 'serve',
-        transformIndexHtml(html) {
-          return html.replace(
-            '%GEMINI_API_KEY%',
-            process.env.GEMINI_API_KEY || env.GEMINI_API_KEY || "AIzaSyCy5mOy7Y8DVDNPcdnBgS7T-_YJCAJdMJI"
-          );
-        }
-      },
       VitePWA({
         registerType: 'autoUpdate',
         includeAssets: ['favicon.svg', 'favicon.ico', 'apple-touch-icon.png', 'logo.svg'],
@@ -55,7 +45,7 @@ export default defineConfig(({mode}) => {
       })
     ],
     define: {
-      'process.env.GEMINI_API_KEY': 'window.__RUNTIME_GEMINI_API_KEY__'
+      'process.env.GEMINI_API_KEY': JSON.stringify(process.env.GEMINI_API_KEY || env.GEMINI_API_KEY || "AIzaSyCy5mOy7Y8DVDNPcdnBgS7T-_YJCAJdMJI")
     },
     resolve: {
       alias: {

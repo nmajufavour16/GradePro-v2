@@ -155,20 +155,9 @@ async function startServer() {
     app.use(vite.middlewares);
   } else {
     const distPath = path.join(process.cwd(), 'dist');
-    app.use(express.static(distPath, { index: false }));
-    
-    // Read html once or dynamically
-    import('fs').then(fs => {
-      app.get('*', (req, res) => {
-        try {
-          let html = fs.readFileSync(path.join(distPath, 'index.html'), 'utf-8');
-          // Inject runtime GEMINI_API_KEY into the placeholder
-          html = html.replace('%GEMINI_API_KEY%', process.env.GEMINI_API_KEY || '');
-          res.send(html);
-        } catch (e) {
-          res.sendFile(path.join(distPath, 'index.html'));
-        }
-      });
+    app.use(express.static(distPath));
+    app.get('*', (req, res) => {
+      res.sendFile(path.join(distPath, 'index.html'));
     });
   }
 
