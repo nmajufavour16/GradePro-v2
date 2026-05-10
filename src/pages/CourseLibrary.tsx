@@ -460,16 +460,7 @@ export default function CourseLibrary() {
               <p className="text-slate-500 mt-2 max-w-sm font-medium leading-relaxed">
                 Dive into specific courses to find student reviews, AI-generated success guides, and peer-contributed study materials.
               </p>
-              <div className="mt-12 flex items-center justify-center gap-2">
-                <div className="flex -space-x-4">
-                  {[1,2,3,4].map(i => (
-                    <div key={i} className="h-10 w-10 rounded-full border-4 border-white bg-slate-100 flex items-center justify-center text-[10px] font-bold text-slate-400">
-                      GP
-                    </div>
-                  ))}
-                </div>
-                <p className="text-xs font-bold text-slate-400 uppercase tracking-widest ml-4">Join 2,400+ Students</p>
-              </div>
+
             </div>
           )}
         </div>
