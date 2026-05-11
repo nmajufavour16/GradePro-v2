@@ -93,6 +93,22 @@ service cloud.firestore {
     // Rules
     // ===============================================================
 
+    function isValidReviewReply(data) {
+      return data.keys().hasAll(['reviewId', 'userId', 'userName', 'content', 'createdAt']) &&
+             data.userId == request.auth.uid &&
+             data.reviewId is string &&
+             data.userName is string &&
+             data.content is string && data.content.size() <= 2000;
+    }
+
+    function isValidNotification(data) {
+      return data.keys().hasAll(['userId', 'type', 'message', 'read', 'createdAt']) &&
+             data.userId is string &&
+             data.type in ['like', 'reply', 'system'] &&
+             data.message is string &&
+             data.read is bool;
+    }
+
     match /metadata/{configId} {
       allow read: if isSignedIn();
       allow write: if isAdmin();
@@ -138,9 +154,27 @@ service cloud.firestore {
     match /courseReviews/{reviewId} {
       allow read: if isSignedIn();
       allow create: if isSignedIn() && isValidReview(incoming());
-      allow update: if (isOwner(existing().userId) || isAdmin()) && isValidReview(incoming()) &&
-                    incoming().diff(existing()).affectedKeys().hasOnly(['rating', 'difficulty', 'comment', 'tips', 'isAnonymous', 'updatedAt']);
+      allow update: if isSignedIn() && (
+        (isOwner(existing().userId) && incoming().diff(existing()).affectedKeys().hasOnly(['rating', 'difficulty', 'comment', 'tips', 'isAnonymous', 'updatedAt', 'userName'])) ||
+        (incoming().diff(existing()).affectedKeys().hasOnly(['likes']))
+      );
       allow delete: if isOwner(existing().userId) || isAdmin();
+    }
+
+    match /courseReviewReplies/{replyId} {
+      allow read: if isSignedIn();
+      allow create: if isSignedIn() && isValidReviewReply(incoming());
+      allow update: if isOwner(existing().userId) && 
+                    incoming().diff(existing()).affectedKeys().hasOnly(['content', 'updatedAt']);
+      allow delete: if isOwner(existing().userId) || isAdmin();
+    }
+
+    match /notifications/{notificationId} {
+      allow read: if isSignedIn() && existing().userId == request.auth.uid;
+      allow create: if isSignedIn() && isValidNotification(incoming());
+      allow update: if isSignedIn() && existing().userId == request.auth.uid && 
+                    incoming().diff(existing()).affectedKeys().hasOnly(['read']);
+      allow delete: if isSignedIn() && existing().userId == request.auth.uid;
     }
 
     match /courseMaterials/{materialId} {

@@ -87,7 +87,7 @@ export default function Onboarding() {
                   placeholder="e.g. University of Lagos"
                 />
                 <datalist id="institutions">
-                  {metadata?.institutions.map(inst => <option key={inst} value={inst} />)}
+                  {metadata?.institutions.map((inst, idx) => <option key={`${inst}-${idx}`} value={inst} />)}
                 </datalist>
               </div>
             </div>
@@ -108,7 +108,7 @@ export default function Onboarding() {
                   placeholder="e.g. Engineering"
                 />
                 <datalist id="faculties">
-                  {metadata?.faculties.map(fac => <option key={fac} value={fac} />)}
+                  {metadata?.faculties.map((fac, idx) => <option key={`${fac}-${idx}`} value={fac} />)}
                 </datalist>
               </div>
             </div>
@@ -129,7 +129,7 @@ export default function Onboarding() {
                   placeholder="e.g. Computer Science"
                 />
                 <datalist id="departments">
-                  {metadata?.departments.map(dep => <option key={dep} value={dep} />)}
+                  {metadata?.departments.map((dep, idx) => <option key={`${dep}-${idx}`} value={dep} />)}
                 </datalist>
               </div>
             </div>

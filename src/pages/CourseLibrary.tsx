@@ -1,12 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
-import { CourseReview, AppMetadata, CourseMaterial, CommunityCourse } from '../types';
-import { collection, query, where, onSnapshot, addDoc, doc, getDoc, orderBy, serverTimestamp, updateDoc, deleteDoc } from 'firebase/firestore';
+import { CourseReview, AppMetadata, CourseMaterial, CommunityCourse, CourseReviewReply } from '../types';
+import { collection, query, where, onSnapshot, addDoc, doc, getDoc, orderBy, serverTimestamp, updateDoc, deleteDoc, arrayUnion, arrayRemove } from 'firebase/firestore';
 import { ref, uploadBytesResumable, getDownloadURL } from 'firebase/storage';
 import { db, storage } from '../firebase';
 import { handleFirestoreError } from '../utils/firebaseErrors';
 import { OperationType } from '../types';
-import { Search, Star, MessageSquare, Info, Sparkles, Filter, Users, BookOpen, Plus, ExternalLink, FileText, Download, Trash2, X, PlusCircle, LayoutGrid, List, TrendingUp, Settings, Edit2 } from 'lucide-react';
+import { Search, Star, MessageSquare, Info, Sparkles, Filter, Users, BookOpen, Plus, ExternalLink, FileText, Download, Trash2, X, PlusCircle, LayoutGrid, List, TrendingUp, Settings, Edit2, Heart, CornerDownRight, MoreVertical } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { GoogleGenAI } from '@google/genai';
 import ReactMarkdown from 'react-markdown';
@@ -52,6 +52,12 @@ export default function CourseLibrary() {
     units: 3
   });
 
+  const [replies, setReplies] = useState<CourseReviewReply[]>([]);
+  const [editingReviewId, setEditingReviewId] = useState<string | null>(null);
+  const [deletingReviewId, setDeletingReviewId] = useState<string | null>(null);
+  const [replyForms, setReplyForms] = useState<Record<string, string>>({}); // reviewId -> replyContent
+  const [showReplyInput, setShowReplyInput] = useState<Record<string, boolean>>({});
+
   useEffect(() => {
     const fetchMetadata = async () => {
       const docRef = doc(db, 'metadata', 'app-config');
@@ -78,10 +84,22 @@ export default function CourseLibrary() {
       handleFirestoreError(error, OperationType.LIST, 'communityCourses');
     });
 
+    const unsubReplies = onSnapshot(query(collection(db, 'courseReviewReplies'), orderBy('createdAt', 'asc')), (snapshot) => {
+      setReplies(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as CourseReviewReply)));
+    }, (error) => {
+      handleFirestoreError(error, OperationType.LIST, 'courseReviewReplies');
+    });
+
+    // Ask for Notification Permissions
+    if ('Notification' in window && Notification.permission === 'default') {
+      Notification.requestPermission();
+    }
+
     return () => {
       unsubReviews();
       unsubMaterials();
       unsubCourses();
+      unsubReplies();
     };
   }, []);
 
@@ -116,17 +134,27 @@ export default function CourseLibrary() {
   const handleAddReview = async () => {
     if (!selectedCourse || !user) return;
     try {
-      await addDoc(collection(db, 'courseReviews'), {
-        ...reviewForm,
-        courseCode: selectedCourse,
-        userId: user.uid,
-        userName: reviewForm.isAnonymous ? 'Anonymous Student' : profile?.displayName || 'GradePro User',
-        createdAt: new Date().toISOString()
-      });
+      if (editingReviewId) {
+        await updateDoc(doc(db, 'courseReviews', editingReviewId), {
+          ...reviewForm,
+          userName: reviewForm.isAnonymous ? 'Anonymous Student' : profile?.displayName || 'GradePro User',
+          updatedAt: new Date().toISOString()
+        });
+      } else {
+        await addDoc(collection(db, 'courseReviews'), {
+          ...reviewForm,
+          courseCode: selectedCourse,
+          userId: user.uid,
+          userName: reviewForm.isAnonymous ? 'Anonymous Student' : profile?.displayName || 'GradePro User',
+          createdAt: new Date().toISOString(),
+          likes: []
+        });
+      }
       setIsAddingReview(false);
+      setEditingReviewId(null);
       setReviewForm({ rating: 5, difficulty: 3, comment: '', tips: '', isAnonymous: false });
     } catch (err) {
-      handleFirestoreError(err, OperationType.CREATE, 'courseReviews');
+      handleFirestoreError(err, editingReviewId ? OperationType.UPDATE : OperationType.CREATE, 'courseReviews');
     }
   };
 
@@ -217,13 +245,119 @@ export default function CourseLibrary() {
     }
   };
 
+  const [deleteConfirm, setDeleteConfirm] = useState<{ id: string, type: 'review' | 'reply' | 'course' } | null>(null);
+
+  const performDelete = async () => {
+    if (!deleteConfirm) return;
+    const { id, type } = deleteConfirm;
+    
+    if (type === 'course') {
+      setDeleteConfirm(null);
+      try {
+        await deleteDoc(doc(db, 'communityCourses', id));
+        setSelectedCourse(null);
+      } catch (err) {
+        handleFirestoreError(err, OperationType.DELETE, `communityCourses/${id}`);
+      }
+    } else if (type === 'review') {
+      setDeleteConfirm(null);
+      setDeletingReviewId(id);
+      try {
+        await deleteDoc(doc(db, 'courseReviews', id));
+        setIsAddingReview(false);
+        setEditingReviewId(null);
+        setReviewForm({ rating: 5, difficulty: 3, comment: '', tips: '', isAnonymous: false });
+      } catch (err) {
+        handleFirestoreError(err, OperationType.DELETE, `courseReviews/${id}`);
+      } finally {
+        setDeletingReviewId(null);
+      }
+    } else if (type === 'reply') {
+      setDeleteConfirm(null);
+      try {
+        await deleteDoc(doc(db, 'courseReviewReplies', id));
+      } catch (err) {
+        handleFirestoreError(err, OperationType.DELETE, `courseReviewReplies/${id}`);
+      }
+    }
+  };
+
   const handleDeleteCourse = async (id: string) => {
-    if (!window.confirm('Are you sure you want to remove this course from the community library?')) return;
+    setDeleteConfirm({ id, type: 'course' });
+  };
+
+  const handleDeleteReview = async (id: string) => {
+    setDeleteConfirm({ id, type: 'review' });
+  };
+
+  const handleDeleteReply = async (id: string) => {
+    setDeleteConfirm({ id, type: 'reply' });
+  };
+
+  const handleEditReviewInit = (review: CourseReview) => {
+    setReviewForm({
+      rating: review.rating,
+      difficulty: review.difficulty,
+      comment: review.comment,
+      tips: review.tips,
+      isAnonymous: review.isAnonymous
+    });
+    setEditingReviewId(review.id);
+    setIsAddingReview(true);
+  };
+
+  const handleLikeReview = async (review: CourseReview) => {
+    if (!user) return;
     try {
-      await deleteDoc(doc(db, 'communityCourses', id));
-      setSelectedCourse(null);
+      const reviewRef = doc(db, 'courseReviews', review.id);
+      const isLiked = review.likes && review.likes.includes(user.uid);
+      await updateDoc(reviewRef, {
+        likes: isLiked ? arrayRemove(user.uid) : arrayUnion(user.uid)
+      });
+
+      // Send notification if it's a new like and not the owner's review
+      if (!isLiked && review.userId !== user.uid) {
+        await addDoc(collection(db, 'notifications'), {
+          userId: review.userId,
+          type: 'like',
+          message: `${profile?.displayName || 'Someone'} liked your review on ${review.courseCode}.`,
+          read: false,
+          relatedId: review.id,
+          createdAt: new Date().toISOString()
+        });
+      }
     } catch (err) {
-      handleFirestoreError(err, OperationType.DELETE, `communityCourses/${id}`);
+      handleFirestoreError(err, OperationType.UPDATE, `courseReviews/${review.id}`);
+    }
+  };
+
+  const handleAddReply = async (reviewId: string, reviewUserId: string, courseCode: string) => {
+    if (!user) return;
+    const content = replyForms[reviewId]?.trim();
+    if (!content) return;
+    try {
+      await addDoc(collection(db, 'courseReviewReplies'), {
+        reviewId,
+        userId: user.uid,
+        userName: profile?.displayName || 'GradePro User',
+        content,
+        createdAt: new Date().toISOString()
+      });
+      setReplyForms({ ...replyForms, [reviewId]: '' });
+      setShowReplyInput({ ...showReplyInput, [reviewId]: false });
+
+      if (user.uid !== reviewUserId) {
+        await addDoc(collection(db, 'notifications'), {
+          userId: reviewUserId,
+          type: 'reply',
+          message: `${profile?.displayName || 'Someone'} replied to your review on ${courseCode}.`,
+          read: false,
+          relatedId: reviewId,
+          createdAt: new Date().toISOString()
+        });
+      }
+    } catch (err) {
+      handleFirestoreError(err, OperationType.CREATE, 'courseReviewReplies');
     }
   };
 
@@ -295,9 +429,9 @@ export default function CourseLibrary() {
                 <div className="text-center py-8">
                   <p className="text-slate-400 text-sm italic">No courses found matching your search.</p>
                 </div>
-              ) : filteredCourses.map(t => (
+              ) : filteredCourses.map((t, index) => (
                 <button
-                  key={t.code}
+                  key={`${t.code}-${(t as any).id || index}`}
                   onClick={() => {
                     setSelectedCourse(t.code);
                     setAiTips(null);
@@ -433,23 +567,118 @@ export default function CourseLibrary() {
                           <p className="text-slate-400 italic text-sm">No reviews yet. Share your experience!</p>
                         </div>
                       ) : (
-                        reviews.filter(r => r.courseCode === selectedCourse).map((r) => (
-                          <motion.div layout key={r.id} className="bg-white p-6 rounded-3xl border border-slate-200 shadow-sm space-y-3">
-                            <div className="flex justify-between items-center">
-                              <div className="flex items-center space-x-1">
-                                {[1,2,3,4,5].map(star => (
-                                  <Star key={star} className={`h-3.5 w-3.5 ${star <= r.rating ? 'text-amber-400 fill-amber-400' : 'text-slate-200'}`} />
-                                ))}
+                        <AnimatePresence mode="popLayout">
+                          {reviews.filter(r => r.courseCode === selectedCourse).map((r) => {
+                            const isMine = r.userId === user?.uid;
+                            const hasLiked = user && r.likes && r.likes.includes(user.uid);
+                            const courseReplies = replies.filter(reply => reply.reviewId === r.id);
+                            const isDeleting = deletingReviewId === r.id;
+
+                            return (
+                            <motion.div 
+                              layout 
+                              key={r.id} 
+                              initial={{ opacity: 0, y: 20 }}
+                              animate={{ opacity: isDeleting ? 0.3 : 1, y: 0, scale: isDeleting ? 0.95 : 1 }}
+                              exit={{ opacity: 0, scale: 0.8, transition: { duration: 0.2 } }}
+                              className="bg-white p-6 rounded-3xl border border-slate-200 shadow-sm space-y-3 relative overflow-hidden"
+                            >
+                              <div className="flex justify-between items-center">
+                                <div className="flex items-center space-x-1">
+                                  {[1, 2, 3, 4, 5].map((star) => (
+                                    <Star key={star} className={`h-3.5 w-3.5 ${star <= r.rating ? 'text-amber-400 fill-amber-400' : 'text-slate-200'}`} />
+                                  ))}
+                                </div>
+                                <div className="flex space-x-2 items-center">
+                                  <span className="text-[10px] text-slate-400 font-bold uppercase">{r.userName}</span>
+                                  {isMine && (
+                                    <div className="relative group ml-1">
+                                      <button className="p-1.5 hover:bg-slate-50 rounded-lg text-slate-400 transition-colors">
+                                        <MoreVertical className="w-4 h-4" />
+                                      </button>
+                                      <div className="absolute right-0 top-full mt-1 w-32 bg-white border border-slate-100 shadow-xl rounded-xl opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-20 overflow-hidden flex flex-col">
+                                        <button type="button" onClick={() => handleEditReviewInit(r)} disabled={isDeleting} className="px-3 py-2.5 text-left text-xs font-bold text-slate-600 hover:bg-slate-50 hover:text-indigo-600 w-full disabled:opacity-50 flex items-center space-x-2 transition-colors">
+                                          <Edit2 className="w-3.5 h-3.5" /> <span>Edit</span>
+                                        </button>
+                                        <div className="h-px bg-slate-50 w-full" />
+                                        <button type="button" onClick={() => handleDeleteReview(r.id)} disabled={isDeleting} className="px-3 py-2.5 text-left text-xs font-bold text-rose-600 hover:bg-rose-50 w-full disabled:opacity-50 flex items-center space-x-2 transition-colors">
+                                          <Trash2 className="w-3.5 h-3.5" /> <span>Delete</span>
+                                        </button>
+                                      </div>
+                                    </div>
+                                  )}
+                                </div>
                               </div>
-                              <span className="text-[10px] text-slate-400 font-bold uppercase">{r.userName}</span>
-                            </div>
-                            <p className="text-slate-700 text-sm font-medium italic">"{r.comment}"</p>
-                            <div className="flex items-center justify-between pt-2 border-t border-slate-50">
-                              <p className="text-[10px] text-indigo-600 font-bold uppercase">Difficulty: {r.difficulty}/5</p>
-                              <span className="text-[9px] text-slate-400 uppercase">{new Date(r.createdAt).toLocaleDateString()}</span>
-                            </div>
-                          </motion.div>
-                        ))
+                              <p className="text-slate-700 text-sm font-medium italic">"{r.comment}"</p>
+                              <div className="flex items-center justify-between pt-2 border-t border-slate-50">
+                                <p className="text-[10px] text-indigo-600 font-bold uppercase">Difficulty: {r.difficulty}/5</p>
+                                <div className="flex items-center space-x-4 text-[10px] uppercase text-slate-400">
+                                  <button type="button" className="flex items-center space-x-1.5 hover:text-slate-600 transition-colors" onClick={() => setShowReplyInput({...showReplyInput, [r.id]: !showReplyInput[r.id]})}>
+                                    <MessageSquare className="w-4 h-4" />
+                                    <span className="font-bold text-sm tracking-widest">{courseReplies.length}</span>
+                                  </button>
+                                  <button type="button" className={`flex items-center space-x-1.5 transition-colors ${hasLiked ? 'text-rose-500' : 'hover:text-rose-500'}`} onClick={() => handleLikeReview(r)}>
+                                    <Heart className={`w-4 h-4 ${hasLiked ? 'fill-rose-500' : ''}`} />
+                                    <span className="font-bold text-sm tracking-widest">{r.likes?.length || 0}</span>
+                                  </button>
+                                  <span className="font-medium">{new Date(r.createdAt).toLocaleDateString()}</span>
+                                </div>
+                              </div>
+
+                              {/* Replies Section */}
+                              <AnimatePresence>
+                                {courseReplies.length > 0 && (
+                                  <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="pt-2 pl-3 space-y-2 border-l-2 border-slate-100 mt-4 text-xs">
+                                    {courseReplies.map(reply => (
+                                      <div key={reply.id} className="bg-slate-50 p-3 rounded-xl text-slate-600 group/reply relative">
+                                        <div className="flex justify-between items-center mb-1">
+                                          <span className="font-bold text-[10px] text-slate-500 uppercase">{reply.userName}</span>
+                                          {(reply.userId === user?.uid || profile?.role === 'admin') && (
+                                            <button 
+                                              type="button" 
+                                              onClick={() => handleDeleteReply(reply.id)} 
+                                              className="p-1 text-slate-300 hover:text-rose-500 hover:bg-rose-50 rounded-lg opacity-0 group-hover/reply:opacity-100 transition-all absolute right-2 top-2"
+                                              title="Delete reply"
+                                            >
+                                              <Trash2 className="w-3.5 h-3.5" />
+                                            </button>
+                                          )}
+                                        </div>
+                                        <p className="pr-6">{reply.content}</p>
+                                      </div>
+                                    ))}
+                                  </motion.div>
+                                )}
+                              </AnimatePresence>
+
+                              {/* Reply Input */}
+                              <AnimatePresence>
+                                {showReplyInput[r.id] && (
+                                  <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="pt-2 mt-2 flex">
+                                    <input 
+                                      type="text" 
+                                      className="flex-1 px-3 py-2 text-xs bg-slate-50 border border-slate-100 rounded-l-xl focus:outline-none focus:ring-1 focus:ring-indigo-500" 
+                                      placeholder="Write a reply..." 
+                                      value={replyForms[r.id] || ''}
+                                      onChange={(e) => setReplyForms({...replyForms, [r.id]: e.target.value})}
+                                      onKeyDown={(e) => {
+                                        if (e.key === 'Enter') handleAddReply(r.id, r.userId, r.courseCode);
+                                      }}
+                                    />
+                                    <button 
+                                      type="button"
+                                      className="px-3 bg-indigo-600 text-white rounded-r-xl text-[10px] font-bold uppercase hover:bg-indigo-700 transition"
+                                      onClick={() => handleAddReply(r.id, r.userId, r.courseCode)}
+                                    >
+                                      Reply
+                                    </button>
+                                  </motion.div>
+                                )}
+                              </AnimatePresence>
+                            </motion.div>
+                            );
+                          })}
+                        </AnimatePresence>
                       )}
                     </div>
                   </div>
@@ -578,15 +807,21 @@ export default function CourseLibrary() {
              <motion.div initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} className="bg-white rounded-[2.5rem] shadow-2xl w-full max-w-md overflow-hidden">
                 <div className="p-8 space-y-6">
                   <div className="flex justify-between items-center">
-                    <h2 className="text-2xl font-bold text-slate-900 tracking-tighter">Student Review</h2>
-                    <button onClick={() => setIsAddingReview(false)}><X className="h-6 w-6 text-slate-400 hover:text-slate-600" /></button>
+                    <h2 className="text-2xl font-bold text-slate-900 tracking-tighter">
+                      {editingReviewId ? 'Edit Review' : 'Student Review'}
+                    </h2>
+                    <button onClick={() => {
+                      setIsAddingReview(false);
+                      setEditingReviewId(null);
+                      setReviewForm({ rating: 5, difficulty: 3, comment: '', tips: '', isAnonymous: false });
+                    }}><X className="h-6 w-6 text-slate-400 hover:text-slate-600" /></button>
                   </div>
                   <div className="space-y-4">
                     <div>
                       <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest block mb-1">Rating</label>
                       <div className="flex space-x-2">
                         {[1,2,3,4,5].map(s => (
-                          <button key={s} onClick={() => setReviewForm({...reviewForm, rating: s})}><Star className={`h-8 w-8 ${s <= reviewForm.rating ? 'text-amber-400 fill-amber-400' : 'text-slate-200'}`} /></button>
+                          <button type="button" key={s} onClick={() => setReviewForm({...reviewForm, rating: s})}><Star className={`h-8 w-8 ${s <= reviewForm.rating ? 'text-amber-400 fill-amber-400' : 'text-slate-200'}`} /></button>
                         ))}
                       </div>
                     </div>
@@ -622,8 +857,17 @@ export default function CourseLibrary() {
                     disabled={!reviewForm.comment}
                     className="w-full py-5 bg-indigo-600 text-white font-bold rounded-3xl hover:bg-indigo-700 transition-all shadow-xl shadow-indigo-100 active:scale-95 disabled:opacity-50"
                   >
-                    Post Experience
+                    {editingReviewId ? 'Save Changes' : 'Post Experience'}
                   </button>
+                  
+                  {editingReviewId && (
+                    <button 
+                      onClick={() => handleDeleteReview(editingReviewId)}
+                      className="w-full py-5 border-2 border-rose-100 text-rose-600 font-bold rounded-3xl hover:bg-rose-50 hover:border-rose-200 transition-all active:scale-95 mt-2"
+                    >
+                      Delete Review
+                    </button>
+                  )}
                 </div>
              </motion.div>
           </div>
@@ -712,6 +956,32 @@ export default function CourseLibrary() {
                 </button>
                 </div>
              </motion.div>
+          </div>
+        )}
+        
+        {deleteConfirm && (
+          <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-md">
+            <motion.div initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.9, opacity: 0 }} className="bg-white rounded-[2.5rem] shadow-2xl w-full max-w-sm overflow-hidden p-8 text-center space-y-6">
+              <div className="mx-auto w-16 h-16 bg-rose-100 text-rose-600 rounded-full flex items-center justify-center mb-4">
+                <Trash2 className="w-8 h-8" />
+              </div>
+              <h3 className="text-2xl font-bold text-slate-900 tracking-tighter">Are you sure?</h3>
+              <p className="text-slate-500 font-medium">This action cannot be undone. Are you sure you want to delete this {deleteConfirm.type}?</p>
+              <div className="flex space-x-3 pt-4">
+                <button 
+                  onClick={() => setDeleteConfirm(null)}
+                  className="flex-1 py-4 bg-slate-100 text-slate-600 font-bold rounded-2xl hover:bg-slate-200 transition-colors"
+                >
+                  Cancel
+                </button>
+                <button 
+                  onClick={performDelete}
+                  className="flex-1 py-4 bg-rose-600 text-white font-bold rounded-2xl hover:bg-rose-700 transition-all shadow-lg shadow-rose-100 active:scale-95"
+                >
+                  Delete
+                </button>
+              </div>
+            </motion.div>
           </div>
         )}
       </AnimatePresence>

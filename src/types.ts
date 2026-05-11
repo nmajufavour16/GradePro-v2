@@ -101,6 +101,27 @@ export interface CourseReview {
   tips: string;
   isAnonymous: boolean;
   createdAt: string;
+  updatedAt?: string;
+  likes?: string[]; // Array of user IDs
+}
+
+export interface CourseReviewReply {
+  id: string;
+  reviewId: string;
+  userId: string;
+  userName?: string;
+  content: string;
+  createdAt: string;
+}
+
+export interface Notification {
+  id: string;
+  userId: string; // The user receiving the notification
+  type: 'like' | 'reply' | 'system';
+  message: string;
+  read: boolean;
+  relatedId?: string; // e.g., reviewId
+  createdAt: string;
 }
 
 export interface CourseMaterial {

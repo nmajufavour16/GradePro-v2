@@ -1,12 +1,14 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Outlet, Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
-import { BookOpen, LayoutDashboard, LogOut, Menu, X, FileText, Sparkles, ShieldCheck, ChevronLeft, ChevronRight, Settings as SettingsIcon, Library } from 'lucide-react';
+import { BookOpen, LayoutDashboard, LogOut, Menu, X, FileText, Sparkles, ShieldCheck, ChevronLeft, ChevronRight, Settings as SettingsIcon, Library, Bell } from 'lucide-react';
 import FloatingAIChat from './FloatingAIChat';
 import UserTour from './UserTour';
 import { GradeProLogo } from './GradeProLogo';
-
 import InstallPrompt from './InstallPrompt';
+import { collection, query, where, onSnapshot, orderBy, limit, updateDoc, doc } from 'firebase/firestore';
+import { db } from '../firebase';
+import { Notification } from '../types';
 
 export default function Layout() {
   const { user, profile, logout } = useAuth();
@@ -14,6 +16,8 @@ export default function Layout() {
   const navigate = useNavigate();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isCollapsed, setIsCollapsed] = useState(false);
+  const [unreadNotifications, setUnreadNotifications] = useState(0);
+  const previousNotificationsRef = useRef<number>(0);
 
   const navigation = [
     { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
@@ -24,9 +28,61 @@ export default function Layout() {
     ...(profile?.role === 'admin' ? [{ name: 'Admin', href: '/admin', icon: ShieldCheck }] : []),
   ];
 
+  const [showNotificationDropdown, setShowNotificationDropdown] = useState(false);
+  const [notifications, setNotifications] = useState<Notification[]>([]);
+
+  useEffect(() => {
+    if (!user) return;
+
+    // Ask for permissions
+    if ('Notification' in window && window.Notification.permission === 'default') {
+      window.Notification.requestPermission();
+    }
+
+    const q = query(
+      collection(db, 'notifications'), 
+      where('userId', '==', user.uid),
+      orderBy('createdAt', 'desc'),
+      limit(20)
+    );
+
+    const unsub = onSnapshot(q, (snapshot) => {
+      const notifs = snapshot.docs.map(d => ({id: d.id, ...d.data()} as Notification));
+      const unread = notifs.filter(n => !n.read);
+      
+      setNotifications(notifs);
+      setUnreadNotifications(unread.length);
+
+      // Trigger push notification for new ones
+      if (unread.length > previousNotificationsRef.current && 'Notification' in window && window.Notification.permission === 'granted') {
+        const latest = unread[0];
+        if (latest) {
+          new window.Notification("GradePro Notification", {
+            body: latest.message,
+            icon: '/apple-touch-icon.png'
+          });
+        }
+      }
+      
+      previousNotificationsRef.current = unread.length;
+    });
+
+    return () => unsub();
+  }, [user]);
+
   const handleLogout = async () => {
     await logout();
     navigate('/');
+  };
+
+  const markNotificationsRead = async () => {
+    const unread = notifications.filter(n => !n.read);
+    for (const n of unread) {
+      // In a real app we'd batch this or do it via a cloud function, but for now loop update is fine
+      try {
+        await updateDoc(doc(db, 'notifications', n.id), { read: true });
+      } catch (err) {}
+    }
   };
 
   return (
@@ -101,7 +157,51 @@ export default function Layout() {
             })}
           </nav>
 
-          <div className="p-3 border-t border-slate-100" id="tour-profile">
+          <div className="p-3 border-t border-slate-100 relative" id="tour-profile">
+            <button
+              onClick={() => {
+                setShowNotificationDropdown(!showNotificationDropdown);
+                if (unreadNotifications > 0) markNotificationsRead();
+              }}
+              title={isCollapsed ? 'Notifications' : ''}
+              className={`flex w-full items-center px-3 py-2.5 mb-1 text-sm font-medium text-slate-600 rounded-lg group hover:text-slate-900 transition-all duration-300 relative overflow-hidden ${isCollapsed ? 'justify-center' : ''}`}
+            >
+              <div className="absolute inset-0 bg-slate-100 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+              <div className="relative">
+                <Bell className={`h-5 w-5 text-slate-400 shrink-0 z-10 transition-transform duration-300 group-hover:scale-110 group-hover:rotate-12 group-hover:text-amber-500 ${isCollapsed ? '' : 'mr-3'}`} />
+                {unreadNotifications > 0 && (
+                  <span className="absolute -top-1 -right-1 bg-rose-500 text-white text-[8px] font-bold px-1.5 py-0.5 rounded-full z-20">
+                    {unreadNotifications}
+                  </span>
+                )}
+              </div>
+              {!isCollapsed && <span className="z-10">Notifications</span>}
+            </button>
+
+            {/* Notification Dropdown */}
+            {showNotificationDropdown && (
+              <div className={`absolute bottom-full left-0 mb-2 w-72 bg-white border border-slate-200 shadow-xl rounded-2xl z-50 overflow-hidden ${isCollapsed ? 'md:left-full md:ml-2 md:bottom-auto md:top-0' : ''}`}>
+                <div className="px-4 py-3 border-b border-slate-100 bg-slate-50 flex justify-between items-center">
+                  <span className="text-xs font-bold text-slate-700 uppercase tracking-wider">Notifications</span>
+                  {unreadNotifications > 0 && <span className="text-[10px] text-indigo-600 font-bold bg-indigo-50 px-2 py-0.5 rounded-full">{unreadNotifications} New</span>}
+                </div>
+                <div className="max-h-64 overflow-y-auto w-full">
+                  {notifications.length === 0 ? (
+                    <div className="p-4 text-center text-xs text-slate-400 italic">No recent notifications</div>
+                  ) : (
+                    notifications.map(n => (
+                      <div key={n.id} className={`p-4 border-b border-slate-50 relative ${!n.read ? 'bg-indigo-50/50' : 'hover:bg-slate-50'}`}>
+                        {!n.read && <div className="absolute left-2 top-1/2 -translate-y-1/2 w-1.5 h-1.5 rounded-full bg-indigo-500"></div>}
+                        <p className={`text-xs ${!n.read ? 'text-slate-800 font-medium pl-3' : 'text-slate-600'} leading-relaxed`}>{n.message}</p>
+                        <span className={`text-[9px] uppercase tracking-wider mt-1 block ${!n.read ? 'text-indigo-400 pl-3' : 'text-slate-400'}`}>
+                          {new Date(n.createdAt).toLocaleDateString()}
+                        </span>
+                      </div>
+                    ))
+                  )}
+                </div>
+              </div>
+            )}
             <div className={`flex items-center px-3 py-3 mb-2 ${isCollapsed ? 'justify-center' : ''}`}>
               <img 
                 src={profile?.photoURL || `https://ui-avatars.com/api/?name=${profile?.displayName || 'User'}&background=random`} 
