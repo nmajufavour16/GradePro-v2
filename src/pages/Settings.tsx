@@ -61,9 +61,16 @@ export default function Settings() {
   };
 
   const faqs = [
-    { q: 'How is my CGPA calculated?', a: 'Your CGPA is calculated by dividing your total grade points by your total units across all semesters.' },
-    { q: 'Can I export my transcript?', a: 'Currently, export functionality is limited. We are working on adding PDF transcript generation soon.' },
-    { q: 'Is my data secure?', a: 'Yes! We use industry-standard encryption for your data, and we do not share your transcripts with third parties.' },
+    { q: 'How is my CGPA calculated?', a: 'Your CGPA is calculated by dividing your total grade points by your total units across all semesters. The grade points for a course are determined by multiplying the units of the course by the point value of your grade based on your selected grading scale.' },
+    { q: 'Can I change my grading scale later?', a: 'Yes! You can change your grading scale at any time from this Account Details settings page. All your past courses will automatically recalculate to fit the new scale.' },
+    { q: 'How does the PDF transcript scanner work?', a: 'Our transcript scanner uses secure AI (Google Gemini) to read the text inside your PDF file and extract your course names, codes, units, and grades. The physical PDF is never permanently stored on our servers.' },
+    { q: 'Can I export my transcript or data?', a: 'Currently, export functionality is limited. However, you can use the "Generate Academic Report" button on the Dashboard to get a text summary. We are actively working on adding full PDF transcript generation soon.' },
+    { q: 'Is my data secure and private?', a: 'Yes! We use industry-standard encryption for your data via Google Firebase. Your personal grades and courses are entirely private to your account and cannot be seen by other users.' },
+    { q: 'Who can see my course reviews?', a: 'Reviews added to the Community Course Library are public. However, if you prefer, you can check the "Post Anonymously" toggle when writing a review to hide your name from the public.' },
+    { q: 'What is the GPA Simulator?', a: 'The GPA Simulator allows you to input "Target Grades" for your current semester to see how those grades would affect your overall CGPA. It\'s a sandbox feature that does not overwrite your actual grades until you confirm them.' },
+    { q: 'Can I add a custom course that isn\'t in my department?', a: 'Yes! When adding a course, you can manually type any Course Code and Course Title. The autocomplete dropdown is just a helpful suggestion list, not a strict requirement.' },
+    { q: 'How does GradePro AI give academic advice?', a: 'GradePro AI securely analyzes your past performance, trends across semesters, and your performance by subject categories (Core, General, Elective) to provide tailored coaching tips and predict your trajectory.' },
+    { q: 'How do I contact support?', a: 'If you encounter any bugs or have feature requests, you can email us directly or check for updates on our official platforms.' },
   ];
 
   return (

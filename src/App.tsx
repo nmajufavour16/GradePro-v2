@@ -14,6 +14,9 @@ import Settings from '@/src/pages/Settings';
 import CourseLibrary from '@/src/pages/CourseLibrary';
 import AdminDashboard from '@/src/pages/AdminDashboard';
 
+import PrivacyPolicy from '@/src/pages/PrivacyPolicy';
+import TermsOfService from '@/src/pages/TermsOfService';
+
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const { user, profile, loading } = useAuth();
   const location = useLocation();
@@ -50,6 +53,8 @@ export default function App() {
         <BrowserRouter>
           <Routes>
             <Route path="/" element={<Landing />} />
+            <Route path="/privacy-policy" element={<PrivacyPolicy />} />
+            <Route path="/terms-of-service" element={<TermsOfService />} />
             <Route path="/onboarding" element={<ProtectedRoute><Onboarding /></ProtectedRoute>} />
             <Route element={<ProtectedRoute><Layout /></ProtectedRoute>}>
               <Route path="/dashboard" element={<Dashboard />} />
