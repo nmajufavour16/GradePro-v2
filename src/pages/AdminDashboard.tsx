@@ -193,6 +193,10 @@ export default function AdminDashboard() {
   const [newDepartment, setNewDepartment] = useState('');
   const [newCourse, setNewCourse] = useState({ code: '', title: '', units: 3 });
 
+  // Users Tab State
+  const [searchQuery, setSearchQuery] = useState('');
+  const [sortBy, setSortBy] = useState<'name_asc' | 'name_desc' | 'date_desc' | 'date_asc' | 'level_asc' | 'level_desc'>('date_desc');
+
   useEffect(() => {
     if (profile?.role !== 'admin') return;
 
@@ -324,6 +328,33 @@ export default function AdminDashboard() {
     }
   };
 
+  const processedUsers = [...users]
+    .filter(u => {
+      const q = searchQuery.toLowerCase();
+      return (u.displayName?.toLowerCase().includes(q)) || 
+             (u.email?.toLowerCase().includes(q)) || 
+             (u.institution?.toLowerCase().includes(q));
+    })
+    .sort((a, b) => {
+      const [field, order] = sortBy.split('_');
+      const multiplier = order === 'asc' ? 1 : -1;
+      
+      if (field === 'name') {
+        const nameA = (a.displayName || a.email || '').toLowerCase();
+        const nameB = (b.displayName || b.email || '').toLowerCase();
+        return nameA.localeCompare(nameB) * multiplier;
+      } else if (field === 'level') {
+        const lvA = a.level || '';
+        const lvB = b.level || '';
+        return lvA.localeCompare(lvB) * multiplier;
+      } else {
+        // date
+        const dateA = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+        const dateB = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+        return (dateA - dateB) * multiplier;
+      }
+    });
+
   return (
     <div className="space-y-8">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
@@ -398,15 +429,31 @@ export default function AdminDashboard() {
 
       {activeTab === 'users' && (
         <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
-          <div className="p-6 border-b border-slate-200 flex items-center justify-between">
+          <div className="p-6 border-b border-slate-200 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
             <h3 className="text-lg font-bold text-slate-900">Registered Users</h3>
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
-              <input
-                type="text"
-                placeholder="Search users..."
-                className="pl-10 pr-4 py-2 bg-slate-50 border-transparent focus:bg-white focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 rounded-xl text-sm transition-all outline-none"
-              />
+            <div className="flex flex-col sm:flex-row items-center gap-3 w-full sm:w-auto">
+              <div className="relative w-full sm:w-auto">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+                <input
+                  type="text"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  placeholder="Search users..."
+                  className="w-full pl-10 pr-4 py-2 bg-slate-50 border-transparent focus:bg-white focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 rounded-xl text-sm transition-all outline-none"
+                />
+              </div>
+              <select
+                value={sortBy}
+                onChange={(e) => setSortBy(e.target.value as any)}
+                className="w-full sm:w-auto px-4 py-2 bg-slate-50 border-transparent focus:bg-white focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 rounded-xl text-sm transition-all outline-none cursor-pointer text-slate-600"
+              >
+                <option value="name_asc">Name (A-Z)</option>
+                <option value="name_desc">Name (Z-A)</option>
+                <option value="date_desc">Date (Newest)</option>
+                <option value="date_asc">Date (Oldest)</option>
+                <option value="level_asc">Level (Ascending)</option>
+                <option value="level_desc">Level (Descending)</option>
+              </select>
             </div>
           </div>
           <div className="overflow-x-auto">
@@ -421,7 +468,7 @@ export default function AdminDashboard() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
-                {users.map(user => (
+                {processedUsers.map(user => (
                   <tr key={user.uid} className="hover:bg-slate-50 transition-colors">
                     <td className="px-6 py-4">
                       <div className="flex items-center">
