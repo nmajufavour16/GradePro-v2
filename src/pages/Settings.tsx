@@ -389,33 +389,88 @@ export default function Settings() {
 
                   {helpSubTab === 'privacy' && (
                     <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="prose prose-sm prose-slate max-w-none text-slate-600">
-                      <h3 className="text-lg font-bold text-slate-900 mb-4">Privacy Policy</h3>
-                      <p className="mb-4">Last Updated: May 2026</p>
+                      <h3 className="text-xl font-bold text-slate-900 mb-2">Privacy Policy</h3>
+                      <p className="mb-6 text-slate-500">Last Updated: May 12, 2026</p>
+                      
                       <p className="mb-4">
-                        GradePro ("we", "our", or "us") respects your privacy. This Privacy Policy explains how your information is collected, used, and protected when you use our academic tracking application.
+                        At GradePro, accessible from gradepro-v2.vercel.app, one of our main priorities is the privacy of our visitors and users. This Privacy Policy document contains types of information that is collected and recorded by GradePro and how we use it. If you have additional questions or require more information about our Privacy Policy, do not hesitate to contact us.
                       </p>
-                      <h4 className="font-semibold text-slate-800 mt-6 mb-2">1. Information We Collect</h4>
-                      <p className="mb-4">We collect account details (name, email via your Google sign-in), profile settings, course entries, and academic transcripts you choose to scan or upload. Uploaded data is processed via secure integrations.</p>
-                      <h4 className="font-semibold text-slate-800 mt-6 mb-2">2. How We Use Information</h4>
-                      <p className="mb-4">Your data is strictly used to provide the GradePro services—calculating your CGPA, tracking academic progress, and offering AI suggestions. We do not sell your personal data.</p>
-                      <h4 className="font-semibold text-slate-800 mt-6 mb-2">3. Security</h4>
-                      <p>We use standard Firebase authentication and database rules to ensure your data is secure and accessible only to you.</p>
+
+                      <h4 className="text-lg font-bold text-slate-900 border-b border-slate-100 pb-2 mt-8 mb-4">1. Information We Collect</h4>
+                      <p className="mb-4">We collect several different types of information for various purposes to provide and improve our Service to you.</p>
+                      <ul className="list-disc pl-5 mb-4">
+                        <li><strong>Personal Data:</strong> Email address, First name and last name, Profile picture URL (via Google Authentication), Academic Information (Institution, Faculty, Department, Level, Grading Scale).</li>
+                        <li><strong>Usage Data:</strong> Information that your browser sends whenever you visit our Service.</li>
+                        <li><strong>Academic Data:</strong> Course details (codes, titles, units), Grades and assessment scores, Semester records and GPA data, Content from uploaded transcripts parsed via Google Gemini AI (files are processed but not permanently stored).</li>
+                      </ul>
+
+                      <h4 className="text-lg font-bold text-slate-900 border-b border-slate-100 pb-2 mt-8 mb-4">2. How We Use Your Data</h4>
+                      <ul className="list-disc pl-5 mb-4">
+                        <li>To provide and maintain our Service (e.g., calculating your exact CGPA)</li>
+                        <li>To notify you about changes to our Service</li>
+                        <li>To allow you to participate in interactive features of our Service (like the Community Library)</li>
+                        <li>To provide customer support</li>
+                        <li>To gather analysis or valuable information so that we can improve our Service</li>
+                        <li>To generate personalized academic insights and coaching via our AI features</li>
+                      </ul>
+
+                      <h4 className="text-lg font-bold text-slate-900 border-b border-slate-100 pb-2 mt-8 mb-4">3. Third-Party Integrations & AI</h4>
+                      <p className="mb-4">
+                        <strong>Google Authentication:</strong> We use Google Authentication to securely sign you in. We only request basic profile information and do not have access to your Google Drive, Gmail, or other Google services.<br/><br/>
+                        <strong>Google Gemini AI:</strong> GradePro utilizes Google's Gemini AI to parse uploaded academic transcripts and provide AI academic coaching. The AI models do not use your data to train their base models.
+                      </p>
+
+                      <h4 className="text-lg font-bold text-slate-900 border-b border-slate-100 pb-2 mt-8 mb-4">4. Data Security</h4>
+                      <p className="mb-4">The security of your data is important to us. We use Google Firebase to securely store your data. Our Firestore database relies on stringent security rules to ensure that your private academic data can only be read and modified by you. However, remember that no method of transmission over the Internet is 100% secure.</p>
+
+                      <h4 className="text-lg font-bold text-slate-900 border-b border-slate-100 pb-2 mt-8 mb-4">5. Public & Community Data</h4>
+                      <p className="mb-4">GradePro features a "Community Course Library". If you choose to submit a course template, review, or study material to the community, that specific submission becomes publicly visible. Your private grades, semesters, assessments, and overall CGPA are never shared. You may choose to post course reviews anonymously.</p>
+
+                      <h4 className="text-lg font-bold text-slate-900 border-b border-slate-100 pb-2 mt-8 mb-4">6. Deleting Your Data</h4>
+                      <p className="mb-4">You have the right to request the deletion of your personal data by contacting us. Within the app, you retain full control to delete individual courses, semesters, reviews, and materials at any time.</p>
+                      
+                      <h4 className="text-lg font-bold text-slate-900 border-b border-slate-100 pb-2 mt-8 mb-4">7. Children's Privacy</h4>
+                      <p className="mb-4">Our Service does not address anyone under the age of 13. We do not knowingly collect personally identifiable information from anyone under the age of 13.</p>
+
+                      <h4 className="text-lg font-bold text-slate-900 border-b border-slate-100 pb-2 mt-8 mb-4">8. Changes to This Privacy Policy</h4>
+                      <p className="mb-4">We may update our Privacy Policy from time to time. We will notify you of any changes by posting the new Privacy Policy on this page and updating the "Last updated" date.</p>
                     </motion.div>
                   )}
 
                   {helpSubTab === 'terms' && (
                     <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="prose prose-sm prose-slate max-w-none text-slate-600">
-                      <h3 className="text-lg font-bold text-slate-900 mb-4">Terms of Service</h3>
-                      <p className="mb-4">Last Updated: May 2026</p>
-                      <p className="mb-4">
-                        Welcome to GradePro. By accessing our application, you agree to these Terms of Service.
-                      </p>
-                      <h4 className="font-semibold text-slate-800 mt-6 mb-2">1. Use of Service</h4>
-                      <p className="mb-4">GradePro is designed to help students track and predict their academic standing. You agree to use the service for personal academic purposes only.</p>
-                      <h4 className="font-semibold text-slate-800 mt-6 mb-2">2. User Responsibilities</h4>
-                      <p className="mb-4">You are responsible for keeping your account information secure. Any content or transcript data uploaded remains your responsibility.</p>
-                      <h4 className="font-semibold text-slate-800 mt-6 mb-2">3. Disclaimer</h4>
-                      <p>CGPA calculations and AI insights are purely informational. Please consult your official university transcripts for exact, authoritative academic standing.</p>
+                      <h3 className="text-xl font-bold text-slate-900 mb-2">Terms of Service</h3>
+                      <p className="mb-6 text-slate-500">Last Updated: May 12, 2026</p>
+
+                      <h4 className="text-lg font-bold text-slate-900 border-b border-slate-100 pb-2 mt-8 mb-4">1. Agreement to Terms</h4>
+                      <p className="mb-4">By accessing or using GradePro (available at gradepro-v2.vercel.app and related domains), you agree to be bound by these Terms of Service and all applicable laws and regulations. If you do not agree with any of these terms, you are prohibited from using or accessing this site.</p>
+
+                      <h4 className="text-lg font-bold text-slate-900 border-b border-slate-100 pb-2 mt-8 mb-4">2. Description of Service</h4>
+                      <p className="mb-4">GradePro is an academic performance tracking and prediction tool designed primarily for students in Nigerian universities. Our services include CGPA calculation, course management, assessment tracking, GPA simulation, AI-guided academic insights, and a community library for course materials and reviews.</p>
+
+                      <h4 className="text-lg font-bold text-slate-900 border-b border-slate-100 pb-2 mt-8 mb-4">3. User Accounts & Registration</h4>
+                      <p className="mb-4">To access certain features of the Service, you must register for an account using Google Authentication. By registering, you agree to: Provide accurate information, maintain the security of your account, accept all responsibility for activities under your account. GradePro reserves the right to terminate accounts that violate these Terms.</p>
+
+                      <h4 className="text-lg font-bold text-slate-900 border-b border-slate-100 pb-2 mt-8 mb-4">4. User Content & Community Guidelines</h4>
+                      <p className="mb-4">Our service allows you to post content in the Community Course Library. You represent and warrant that the Content belongs to you, does not violate any rights, does not promote academic dishonesty, and is not unlawful or objectional. We reserve the right to monitor and edit or remove any Content.</p>
+
+                      <h4 className="text-lg font-bold text-slate-900 border-b border-slate-100 pb-2 mt-8 mb-4">5. Intellectual Property</h4>
+                      <p className="mb-4">The Service and its original content (excluding Content provided by users) are and will remain the exclusive property of GradePro and its licensors. Our trademarks may not be used without prior written consent.</p>
+
+                      <h4 className="text-lg font-bold text-slate-900 border-b border-slate-100 pb-2 mt-8 mb-4">6. Academic Disclaimer</h4>
+                      <p className="mb-4">GradePro is designed as a supplementary tool. The CGPA calculations, simulations, and AI recommendations are approximations based on your input and should not be considered official academic records. Always refer to your university's official grading systems and student portals for definitive academic standing.</p>
+
+                      <h4 className="text-lg font-bold text-slate-900 border-b border-slate-100 pb-2 mt-8 mb-4">7. Limitation of Liability</h4>
+                      <p className="mb-4">In no event shall GradePro or its affiliates be liable for any indirect, incidental, special, consequential or punitive damages resulting from your access to or use of the Service, any conduct of third parties, or unauthorized access to your transmissions.</p>
+
+                      <h4 className="text-lg font-bold text-slate-900 border-b border-slate-100 pb-2 mt-8 mb-4">8. Governing Law</h4>
+                      <p className="mb-4">These Terms shall be governed and construed in accordance with the laws of the Federal Republic of Nigeria, without regard to its conflict of law provisions.</p>
+
+                      <h4 className="text-lg font-bold text-slate-900 border-b border-slate-100 pb-2 mt-8 mb-4">9. Changes to Terms</h4>
+                      <p className="mb-4">We reserve the right to modify or replace these Terms at any time. By continuing to access or use our Service after revisions become effective, you agree to be bound by the revised terms.</p>
+
+                      <h4 className="text-lg font-bold text-slate-900 border-b border-slate-100 pb-2 mt-8 mb-4">10. Contact Us</h4>
+                      <p className="mb-4">If you have any questions about these Terms, please contact us via the support channels provided in the application.</p>
                     </motion.div>
                   )}
                 </div>
