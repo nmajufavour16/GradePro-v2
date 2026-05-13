@@ -1,5 +1,5 @@
 import React from 'react';
-import { Navigate } from 'react-router-dom';
+import { Navigate, Link } from 'react-router-dom';
 import { useAuth } from '@/src/contexts/AuthContext';
 import { BookOpen, TrendingUp, BrainCircuit, FileText, Loader2 } from 'lucide-react';
 import { GradeProLogo } from '../components/GradeProLogo';
@@ -64,6 +64,14 @@ export default function Landing() {
           </div>
         </div>
       </main>
+
+      <footer className="py-8 text-center text-slate-500 text-sm">
+        <p className="space-x-4">
+          <Link to="/privacy-policy" className="hover:text-indigo-600 transition-colors">Privacy Policy</Link>
+          <span>&middot;</span>
+          <Link to="/terms-of-service" className="hover:text-indigo-600 transition-colors">Terms of Service</Link>
+        </p>
+      </footer>
     </div>
   );
 }
