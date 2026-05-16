@@ -17,6 +17,8 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
+export const ADMIN_EMAILS = ['nmajufavour16@gmail.com', 'tjohn035@uniport.edu.ng'];
+
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [profile, setProfile] = useState<UserProfile | null>(null);
@@ -55,7 +57,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       if (docSnap.exists()) {
         const data = docSnap.data() as UserProfile;
         // Force admin role for the specific email if not already set
-        if (currentUser.email === 'nmajufavour16@gmail.com' && data.role !== 'admin') {
+        if (currentUser.email && ADMIN_EMAILS.includes(currentUser.email) && data.role !== 'admin') {
           data.role = 'admin';
           await setDoc(docRef, { 
             role: 'admin',
@@ -72,7 +74,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           photoURL: currentUser.picture || '',
           targetCGPA: 4.5,
           gradingScale: 5.0,
-          role: currentUser.email === 'nmajufavour16@gmail.com' ? 'admin' : 'user',
+          role: (currentUser.email && ADMIN_EMAILS.includes(currentUser.email)) ? 'admin' : 'user',
           createdAt: new Date().toISOString()
         };
         await setDoc(docRef, newProfile);
@@ -115,7 +117,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     if (!user) return;
     try {
       const updated = { 
-        role: user.email === 'nmajufavour16@gmail.com' ? 'admin' : 'user',
+        role: (user.email && ADMIN_EMAILS.includes(user.email)) ? 'admin' : 'user',
         ...profile, 
         ...data, 
         uid: user.uid, 
