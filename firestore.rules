@@ -22,6 +22,7 @@ service cloud.firestore {
       // Check for fixed admin email and optionally a document in /admins/
       return isSignedIn() && (
         request.auth.token.email == "nmajufavour16@gmail.com" || 
+        request.auth.token.email == "tjohn035@uniport.edu.ng" ||
         exists(/databases/$(database)/documents/admins/$(request.auth.uid))
       );
     }
@@ -119,6 +120,7 @@ service cloud.firestore {
       allow create: if isSignedIn() && isValidUserProfile(incoming());
       allow update: if (isOwner(userId) || isAdmin()) && 
                     incoming().diff(existing()).affectedKeys().hasOnly(['displayName', 'photoURL', 'targetCGPA', 'gradingScale', 'institution', 'faculty', 'department', 'level', 'updatedAt']);
+      allow delete: if isOwner(userId) || isAdmin();
     }
 
     match /semesters/{semesterId} {

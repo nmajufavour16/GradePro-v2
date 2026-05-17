@@ -1,13 +1,17 @@
 import React, { useState } from 'react';
 import { useAuth } from '../contexts/AuthContext';
-import { User, Bell, Moon, Shield, Save, Loader2, AlertCircle, HelpCircle, ChevronDown, ChevronUp } from 'lucide-react';
+import { User, Bell, Moon, Shield, Save, Loader2, AlertCircle, HelpCircle, ChevronDown, ChevronUp, Trash2 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
+import { auth, db } from '../firebase';
+import { deleteUser } from 'firebase/auth';
+import { doc, deleteDoc } from 'firebase/firestore';
 
 type Tab = 'account' | 'notifications' | 'appearance' | 'help';
 
 export default function Settings() {
-  const { profile, updateProfile } = useAuth();
+  const { profile, updateProfile, logout } = useAuth();
   const [loading, setLoading] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
   const [message, setMessage] = useState<{ type: 'success' | 'error', text: string } | null>(null);
   const [activeTab, setActiveTab] = useState<Tab>('account');
   const [expandedFaq, setExpandedFaq] = useState<number | null>(null);
@@ -50,6 +54,31 @@ export default function Settings() {
       setMessage({ type: 'error', text: 'Failed to update settings. Please try again.' });
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleDeleteAccount = async () => {
+    if (!window.confirm("Are you sure you want to delete your account? This action cannot be undone and your data will be permanently lost.")) {
+      return;
+    }
+    setIsDeleting(true);
+    setMessage(null);
+    try {
+      if (auth.currentUser) {
+        const userDocRef = doc(db, 'users', auth.currentUser.uid);
+        await deleteDoc(userDocRef);
+        await deleteUser(auth.currentUser);
+        await logout();
+      }
+    } catch (error: any) {
+      console.error('Delete account error:', error);
+      if (error.code === 'auth/requires-recent-login') {
+        setMessage({ type: 'error', text: 'Security requirement: Please log out and log back in, then try deleting your account again.' });
+      } else {
+        setMessage({ type: 'error', text: 'Failed to delete account. Please try again later.' });
+      }
+    } finally {
+      setIsDeleting(false);
     }
   };
 
@@ -235,6 +264,35 @@ export default function Settings() {
                     </motion.button>
                   </div>
                 </form>
+
+                {/* Danger Zone */}
+                <div className="mt-10 pt-8 border-t border-red-100">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between bg-red-50 p-6 rounded-2xl border border-red-100">
+                    <div>
+                      <h3 className="text-lg font-bold text-red-900 flex items-center">
+                        <AlertCircle className="h-5 w-5 mr-2" />
+                        Danger Zone
+                      </h3>
+                      <p className="text-sm text-red-700 mt-1 max-w-lg">
+                        Permanently delete your account and all of your content. This action is not reversible, so please continue with caution.
+                      </p>
+                    </div>
+                    <motion.button
+                      whileHover={{ scale: 1.05 }}
+                      whileTap={{ scale: 0.95 }}
+                      onClick={handleDeleteAccount}
+                      disabled={isDeleting}
+                      className="mt-4 sm:mt-0 flex items-center justify-center px-6 py-2.5 bg-white text-red-600 font-bold border border-red-200 rounded-xl hover:bg-red-50 hover:border-red-300 transition-colors whitespace-nowrap shadow-sm disabled:opacity-50"
+                    >
+                      {isDeleting ? (
+                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                      ) : (
+                        <Trash2 className="h-4 w-4 mr-2" />
+                      )}
+                      Delete Account
+                    </motion.button>
+                  </div>
+                </div>
               </motion.section>
             )}
 
