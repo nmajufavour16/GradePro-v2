@@ -119,8 +119,8 @@ service cloud.firestore {
     match /users/{userId} {
       allow read: if isOwner(userId) || isAdmin();
       allow create: if isSignedIn() && isValidUserProfile(incoming());
-      allow update: if (isOwner(userId) || isAdmin()) && 
-                    incoming().diff(existing()).affectedKeys().hasOnly(['displayName', 'photoURL', 'targetCGPA', 'gradingScale', 'institution', 'faculty', 'department', 'level', 'updatedAt']);
+      allow update: if (isOwner(userId) && incoming().diff(existing()).affectedKeys().hasOnly(['displayName', 'photoURL', 'targetCGPA', 'gradingScale', 'institution', 'faculty', 'department', 'level', 'updatedAt'])) ||
+                    (isAdmin() && incoming().diff(existing()).affectedKeys().hasOnly(['displayName', 'photoURL', 'targetCGPA', 'gradingScale', 'institution', 'faculty', 'department', 'level', 'updatedAt', 'role', 'uid', 'email']));
       allow delete: if isOwner(userId) || isAdmin();
     }
 
